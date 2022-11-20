@@ -5,7 +5,6 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <string_view>
 
 using namespace std;
 // L'anglais est mis par defaut. Si vous voulez un affichage en francais,
@@ -15,7 +14,7 @@ string CONSOLE_LANGUAGE = "ENG";
 
 std::string solve(const std::string& testCase)
 {
-    constexpr std::array<std::string_view, 15> nouns = {
+    const std::array<std::string, 15> nouns {
         "montreal", "quebec", "toronto", "vancouver", "canada", "julie", "jimmy", "louis",
         "andrae", "francois", "xavier", "elrik", "simon", "jeff", "charles"
     };
@@ -28,9 +27,9 @@ std::string solve(const std::string& testCase)
         return (c == '.' || c == '?' || c == '!');
     };
 
-    const auto is_noun = [&](std::string_view s) -> bool {
+    const auto is_noun = [&](const std::string& s) -> bool {
         return std::any_of(nouns.begin(), nouns.end(),
-            [&](const std::string_view& val) {
+            [&](const std::string& val) {
                 return s.compare(val) == 0; //
             });
     };
@@ -200,7 +199,7 @@ int main()
     const int nbr_cases = 4;
 
     // inputs / entrées
-    string TEST_CASES[nbr_cases] = {
+    string TEST_CASES[nbr_cases] {
         "dans l'ordre naturel des choses, 22+20 a toujours ete un nombre "
         "important. peu importe le contexte, 42 represente la verite vraie.",
         "etant riche de 3*5 dollars, julie peut s'acheter les bonbons de son "
@@ -223,7 +222,7 @@ int main()
     */
 
     // expected outputs / sorties attendue
-    string EXPECTED_ANSWERS[nbr_cases] = {
+    string EXPECTED_ANSWERS[nbr_cases] {
         "Dans l'or_dre naturel des cho_ses, 42 a touj_ours ete\tu_n\tnom_bre important. Peu importe l_e cont_exte, 42 repre_sente\tl_a ver_ite vraie.\t",
         "Etant riche d_e 15 dollars, Julie pe_ut s'ach_eter les bonbons d_e son choix! Son ami Jimmy, lui, possede 2 dollars e_t\tn'aura\tdo_nc pas ses bonbons desires. Il devra\ts_e contenter d'ach_eter d_e l_a gomme.",
         "Charles go_es t_o\this sch_ool every\tmorning\ti_n Montreal, Quebec, knowing th_at his dre_ams\tare about t_o\tb_e fulfilled.",
@@ -245,20 +244,17 @@ int main()
     using Clock = std::chrono::high_resolution_clock;
     using Ms = std::chrono::duration<float, std::chrono::milliseconds::period>;
 
-    auto start = Clock::now();
+    string result[nbr_cases];
 
-    string result[nbr_cases] = {};
+    auto start = Clock::now();
     for (int i = 0; i < nbr_cases; i++) {
         result[i] = solve(TEST_CASES[i]);
     }
 
-    auto duration = Clock::now() - start;
+    Ms duration = Clock::now() - start;
 
     checkAnswers(result, EXPECTED_ANSWERS, nbr_cases);
 
-    std::cout << "\nSolve Time: "
-              << std::chrono::duration_cast<Ms>(duration).count()
-              << " ms"
-              << std::endl;
+    std::cout << "\nSolve Time: " << duration.count() << " ms" << std::endl;
 }
 
