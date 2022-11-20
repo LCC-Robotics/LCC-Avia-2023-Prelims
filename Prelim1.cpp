@@ -262,11 +262,3 @@ int main()
               << std::endl;
 }
 
-// dans l'ordre naturel des choses, 22+20 a toujours ete un nombre important. peu importe le contexte, 42 represente la verite vraie.
-// Dans l'or_dre naturel des cho_ses, 42 a touj_ours ete    u_n   nom_bre important. Peu importe l_e cont_exte, 42 repre_sente l_a ver_ite vraie.
-// etant riche de 3*5 dollars, julie peut s'acheter les bonbons de son choix! son ami jimmy, lui, possede 14-12 dollars et n'aura donc pas ses bonbons desires. il devra se contenter d'acheter de la gomme.
-// Etant riche d_e 15 dollars, Julie pe_ut s'ach_eter les bonbons d_e son choix! Son ami Jimmy, lui, possede 2 dollars e_t  n'aura  do_nc pas ses bonbons desires. Il devra s_e contenter d'ach_eter d_e l_a gomme.
-// charles goes to his school every morning in montreal, quebec, knowing that his dreams are about to be fulfilled.
-// Charles go_es t_o    his sch_ool every morning    i_n Montreal, Quebec, knowing th_at his dre_ams   are about t_o    b_e fulfilled.
-// what a beautiful day outside! it's almost like louis could touch some grass! 20/5 kilos on his lawn, to be precise.
-// What a beautiful day outside! It's alm_ost  li_ke Louis could   touch so_me grass! 4 kilos o_n his la_wn,    t_o	b_e precise.
