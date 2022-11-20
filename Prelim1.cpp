@@ -27,7 +27,7 @@ string solve(string testCase)
     const auto is_noun = [&](const std::string& s) -> bool {
         return std::any_of(nouns.begin(), nouns.end(),
             [&](const std::string& val) {
-                return s.compare(val) == 0; //
+                return s.starts_with(val); //
             });
     };
 
@@ -77,17 +77,13 @@ string solve(string testCase)
                 }
             }
         } else if (!std::isupper(token.front())) { // do not need to process words that begin with uppercase
-            std::string stripped_word = is_punctuation(token.back())
-                ? token.substr(0, token.size() - 1) // if the last letter is punctuation, remove the punctuation
-                : token;
-
             if (
                 is_sentence_delimiter(prev_token.back()) // Rule 2 - capitalize if the preceding token ends in punctuation
-                || is_noun(stripped_word) // Rule 3 - capitalize if word is in list of nouns
+                || is_noun(token) // Rule 3 - capitalize if word is in list of nouns
             ) {
                 token[0] = std::toupper(token.front());
 
-            } else { 
+            } else {
                 int alpha_len = token.size(); // length of string excluding punctuation
                 int total_value = 0; // sum of the corresponding numerical value of alphabetical letter
 
@@ -99,7 +95,7 @@ string solve(string testCase)
                         alpha_len--;
                     }
                 }
-                
+
                 // Rule 4 - add '_' at midpoint if length excluding punctuation is divisible by 2
                 if (alpha_len != 0 && alpha_len % 2 == 0) {
                     const int midpoint = alpha_len / 2;
@@ -133,7 +129,7 @@ string solve(string testCase)
         answer.resize(answer.size() - 1);
     }
 
-    return answer; 
+    return answer;
 }
 
 // Do not modify anything beyond this point. / Ne rien modifier après ce point.
