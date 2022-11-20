@@ -15,7 +15,7 @@ string CONSOLE_LANGUAGE = "ENG";
 
 std::string solve(const std::string& testCase)
 {
-    constexpr std::array<std::string_view, 15> nouns {
+    const std::array<std::string, 15> nouns {
         "montreal", "quebec", "toronto", "vancouver", "canada", "julie", "jimmy", "louis",
         "andrae", "francois", "xavier", "elrik", "simon", "jeff", "charles"
     };
@@ -28,9 +28,9 @@ std::string solve(const std::string& testCase)
         return (c == '.' || c == '?' || c == '!');
     };
 
-    const auto is_noun = [&](const std::string_view s) -> bool {
+    const auto is_noun = [&](const std::string& s) -> bool {
         return std::any_of(nouns.begin(), nouns.end(),
-            [&](const std::string_view& val) {
+            [&](const std::string& val) {
                 return s.compare(val) == 0; //
             });
     };
