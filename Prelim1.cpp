@@ -43,7 +43,7 @@ std::string solve(const std::string& testCase)
 
     // Edge case: first word needs to be capitalized
     std::getline(iss, token, ' ');
-    token[0] = toupper(token[0]);
+    token[0] = std::toupper(token[0]);
     answer += token + ' ';
 
     while (std::getline(iss, token, ' ')) { // parse word by word
