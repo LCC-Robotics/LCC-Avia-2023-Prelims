@@ -1,7 +1,6 @@
+#include <array>
 #include <iostream>
 #include <sstream>
-#include <string>
-#include <string_view>
 
 using namespace std;
 // L'anglais est mis par defaut. Si vous voulez un affichage en francais,
@@ -11,9 +10,7 @@ string CONSOLE_LANGUAGE = "ENG";
 
 string solve(string testCase)
 {
-    string answer; // placeholder
-    // Code goes here / Votre code commence ici
-    const array<string, 15> nouns {
+    const std::array<std::string, 15> nouns = {
         "montreal", "quebec", "toronto", "vancouver", "canada", "julie", "jimmy", "louis",
         "andrae", "francois", "xavier", "elrik", "simon", "jeff", "charles"
     };
@@ -26,78 +23,92 @@ string solve(string testCase)
         return (c == '.' || c == '?' || c == '!');
     };
 
-    testCase[0] = toupper(*testCase.begin()); // capitalize first letter
+    const auto is_noun = [&](const std::string& s) -> bool {
+        return std::any_of(nouns.begin(), nouns.end(),
+            [&](const std::string& val) {
+                return s.compare(val) == 0; //
+            });
+    };
 
-    istringstream iss { testCase };
-    string token;
-    string prev_token;
+    std::string answer;
 
-    while (getline(iss, token, ' ')) {
+    testCase[0] = std::toupper(testCase.front()); // capitalize first letter
+    std::istringstream iss { testCase }; // string -> string stream
+
+    std::string token;
+    std::string prev_token;
+
+    while (std::getline(iss, token, ' ')) { // parse word by word
         char delimiter = ' ';
 
-        if (isdigit(*token.begin())) {
+        if (std::isdigit(token.front())) {
             // Rule 1 - simplify math operations
-            string temp = "";
+            std::string temp = "";
             int arg1 = 0, arg2 = 0;
             char op = 0;
 
             for (const char& c : token) {
-                if (isdigit(c)) {
+                if (std::isdigit(c)) {
                     temp += c;
                 } else {
                     op = c;
-
-                    arg1 = stoi(temp);
+                    arg1 = std::stoi(temp);
                     temp.clear();
                 }
             }
 
             if (op) {
-                arg2 = stoi(temp);
+                arg2 = std::stoi(temp);
 
                 switch (op) {
                 case '+':
-                    token = to_string(arg1 + arg2);
+                    token = std::to_string(arg1 + arg2);
                     break;
                 case '-':
-                    token = to_string(arg1 - arg2);
+                    token = std::to_string(arg1 - arg2);
                     break;
                 case '*':
-                    token = to_string(arg1 * arg2);
+                    token = std::to_string(arg1 * arg2);
                     break;
                 case '/':
-                    token = to_string(arg1 / arg2);
+                    token = std::to_string(arg1 / arg2);
                     break;
                 }
             }
-        } else {
+        } else if (!std::isupper(token.front())) { // do not need to process words that begin with uppercase
+            std::string stripped_word = is_punctuation(token.back())
+                ? token.substr(0, token.size() - 1) // if the last letter is punctuation, remove the punctuation
+                : token;
+
             if (
-                is_sentence_delimiter(*(prev_token.end() - 1)) // Rule 2 - capitalize if the preceding token ends in punctuation
-                || std::any_of(nouns.begin(), nouns.end(),
-                    [&](const string& val) {
-                        return token.find(val) != string::npos;
-                    }) // Rule 3 - capitalize if word is in list of nouns
+                is_sentence_delimiter(prev_token.back()) // Rule 2 - capitalize if the preceding token ends in punctuation
+                || is_noun(stripped_word) // Rule 3 - capitalize if word is in list of nouns
             ) {
-                token[0] = toupper(*token.begin());
-            } else if (!isupper(*token.begin())) { // already cannot be number
-                int len = token.size();
-                int total_value = 0;
+                token[0] = std::toupper(token.front());
+
+            } else { 
+                int alpha_len = token.size(); // length of string excluding punctuation
+                int total_value = 0; // sum of the corresponding numerical value of alphabetical letter
 
                 for (const char& c : token) {
+                    // using one loop to do two things so efficient wor
                     if (c >= 'a' && c <= 'z') {
                         total_value += c - 'a' + 1;
                     } else if (is_punctuation(c)) {
-                        len--;
+                        alpha_len--;
                     }
                 }
+                
                 // Rule 4 - add '_' at midpoint if length excluding punctuation is divisible by 2
-                if (len != 0 && len % 2 == 0) {
+                if (alpha_len != 0 && alpha_len % 2 == 0) {
+                    const int midpoint = alpha_len / 2;
                     int alpha_count = 0;
 
                     for (auto it = token.begin(); it < token.end(); it++) {
                         if (!is_punctuation(*it)) {
                             alpha_count++;
-                            if (alpha_count == len / 2) {
+
+                            if (alpha_count == midpoint) {
                                 token.insert(it + 1, 1, '_');
                                 break;
                             }
@@ -107,23 +118,21 @@ string solve(string testCase)
 
                 // Rule 5 - use tab as delimiter if the sum of the corresponding numerical value
                 //          of the letters is divisible by 5
-                if (len != 0 && total_value % 5 == 0) {
+                if (alpha_len != 0 && total_value % 5 == 0) {
                     delimiter = '\t';
                 }
             }
         }
         answer += token + delimiter;
-
         prev_token = token;
     }
 
-    if (*(answer.end() - 1) == ' ') // strip whitespace from end
+    if (answer.back() == ' ') // strip whitespace from end
     {
         answer.resize(answer.size() - 1);
     }
 
-    return answer; // Return test case output here / Retourner la sortie de votre
-                   // code sur cette ligne
+    return answer; 
 }
 
 // Do not modify anything beyond this point. / Ne rien modifier après ce point.
