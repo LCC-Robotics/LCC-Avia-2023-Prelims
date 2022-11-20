@@ -1,6 +1,7 @@
 #include <array>
 #include <iostream>
 #include <sstream>
+#include <string>
 
 using namespace std;
 // L'anglais est mis par defaut. Si vous voulez un affichage en francais,
@@ -235,9 +236,22 @@ int main(int argc, char* argv[])
     la_wn,	t_o	b_e precise.
     */
 
+    using Clock = std::chrono::high_resolution_clock;
+    using Ms = std::chrono::duration<float, std::chrono::milliseconds::period>;
+
+    auto start = Clock::now();
+
     string result[nbr_cases] = {};
     for (int i = 0; i < nbr_cases; i++) {
         result[i] = solve(TEST_CASES[i]);
     }
+
+    auto duration = Clock::now() - start;
+
     checkAnswers(result, EXPECTED_ANSWERS, nbr_cases);
+
+    std::cout << "\nSolve Time: "
+              << std::chrono::duration_cast<Ms>(duration).count()
+              << " ms"
+              << std::endl;
 }
