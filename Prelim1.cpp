@@ -48,14 +48,18 @@ std::string solve(const std::string& testCase)
 
     while (std::getline(iss, token, ' ')) { // parse word by word
         char delimiter = ' ';
+        std::string word = is_punctuation(token.back()) // Edge case: word still considered noun if there is punctuation at the end of token
+            ? token.substr(0, token.size() - 1) // truncate last letter
+            : token;
 
-        if (std::isdigit(token[0])) {
+        if (std::isdigit(token[0]))
+        {
             // Rule 1 - simplify math operations
             std::string temp = "";
             int arg1 = 0, arg2 = 0;
             char op = 0;
 
-            for (const char& c : token) {
+            for (const char& c : word) {
                 if (std::isdigit(c)) {
                     temp += c;
                 } else {
@@ -83,13 +87,12 @@ std::string solve(const std::string& testCase)
                     break;
                 }
             }
-        } else if (!std::isupper(token[0])) { // do not need to process words that begin with uppercase (rule 4 and 5 don't apply)
+        }
+        else if (!std::isupper(token[0]))
+        { // do not need to process words that begin with uppercase (rule 4 and 5 don't apply)
             if (
                 is_sentence_delimiter(prev_token.back()) || // Rule 2 - capitalize if the preceding token ends in punctuation
-                is_noun(
-                    is_punctuation(token.back()) // Edge case: word still considered noun if there is punctuation at the end of token
-                        ? token.substr(0, token.size() - 1) // truncate last letter
-                        : token) // Rule 3 - capitalize if word is in list of nouns
+                is_noun(word) // Rule 3 - capitalize if word is in list of nouns
             ) {
                 token[0] = std::toupper(token[0]); // capitalize
             } else {
