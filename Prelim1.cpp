@@ -1,7 +1,11 @@
+#include <algorithm>
 #include <array>
+#include <cctype>
+#include <chrono>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 using namespace std;
 // L'anglais est mis par defaut. Si vous voulez un affichage en francais,
@@ -9,9 +13,9 @@ using namespace std;
 string CONSOLE_LANGUAGE = "ENG";
 // DO NOT DELETE STATEMENT / NE PAS EFFACER CETTE DÉCLARATION
 
-string solve(string testCase)
+std::string solve(const std::string& testCase)
 {
-    const std::array<std::string, 15> nouns = {
+    constexpr std::array<std::string_view, 15> nouns = {
         "montreal", "quebec", "toronto", "vancouver", "canada", "julie", "jimmy", "louis",
         "andrae", "francois", "xavier", "elrik", "simon", "jeff", "charles"
     };
@@ -24,25 +28,28 @@ string solve(string testCase)
         return (c == '.' || c == '?' || c == '!');
     };
 
-    const auto is_noun = [&](const std::string& s) -> bool {
+    const auto is_noun = [&](std::string_view s) -> bool {
         return std::any_of(nouns.begin(), nouns.end(),
-            [&](const std::string& val) {
-                return s.starts_with(val); //
+            [&](const std::string_view& val) {
+                return s.compare(val) == 0; //
             });
     };
 
     std::string answer;
 
-    testCase[0] = std::toupper(testCase.front()); // capitalize first letter
     std::istringstream iss { testCase }; // string -> string stream
-
     std::string token;
     std::string prev_token;
+
+    // Edge case: first word needs to be capitalized
+    std::getline(iss, token, ' ');
+    token[0] = toupper(token[0]);
+    answer += token + ' ';
 
     while (std::getline(iss, token, ' ')) { // parse word by word
         char delimiter = ' ';
 
-        if (std::isdigit(token.front())) {
+        if (std::isdigit(token[0])) {
             // Rule 1 - simplify math operations
             std::string temp = "";
             int arg1 = 0, arg2 = 0;
@@ -76,14 +83,17 @@ string solve(string testCase)
                     break;
                 }
             }
-        } else if (!std::isupper(token.front())) { // do not need to process words that begin with uppercase
+        } else if (!std::isupper(token[0])) { // do not need to process words that begin with uppercase (rule 4 and 5 don't apply)
             if (
-                is_sentence_delimiter(prev_token.back()) // Rule 2 - capitalize if the preceding token ends in punctuation
-                || is_noun(token) // Rule 3 - capitalize if word is in list of nouns
+                is_sentence_delimiter(prev_token.back()) || // Rule 2 - capitalize if the preceding token ends in punctuation
+                is_noun(
+                    is_punctuation(token.back()) // Edge case: word still considered noun if there is punctuation at the end of token
+                        ? token.substr(0, token.size() - 1) // truncate last letter
+                        : token) // Rule 3 - capitalize if word is in list of nouns
             ) {
-                token[0] = std::toupper(token.front());
-
+                token[0] = std::toupper(token[0]); // capitalize
             } else {
+                // Rule 4 and 5 don't apply to numbers or capitalized tokens
                 int alpha_len = token.size(); // length of string excluding punctuation
                 int total_value = 0; // sum of the corresponding numerical value of alphabetical letter
 
@@ -96,7 +106,7 @@ string solve(string testCase)
                     }
                 }
 
-                // Rule 4 - add '_' at midpoint if length excluding punctuation is divisible by 2
+                // Rule 4 - add '_' at midpoint if length (excluding punctuation) is divisible by 2
                 if (alpha_len != 0 && alpha_len % 2 == 0) {
                     const int midpoint = alpha_len / 2;
                     int alpha_count = 0;
@@ -185,7 +195,7 @@ void checkAnswers(string* result, string* expected, int nbr_cases)
 }
 
 // DO NOT TOUCH! / NE PAS TOUCHER!
-int main(int argc, char* argv[])
+int main()
 {
     const int nbr_cases = 4;
 
@@ -251,3 +261,12 @@ int main(int argc, char* argv[])
               << " ms"
               << std::endl;
 }
+
+// dans l'ordre naturel des choses, 22+20 a toujours ete un nombre important. peu importe le contexte, 42 represente la verite vraie.
+// Dans l'or_dre naturel des cho_ses, 42 a touj_ours ete    u_n   nom_bre important. Peu importe l_e cont_exte, 42 repre_sente l_a ver_ite vraie.
+// etant riche de 3*5 dollars, julie peut s'acheter les bonbons de son choix! son ami jimmy, lui, possede 14-12 dollars et n'aura donc pas ses bonbons desires. il devra se contenter d'acheter de la gomme.
+// Etant riche d_e 15 dollars, Julie pe_ut s'ach_eter les bonbons d_e son choix! Son ami Jimmy, lui, possede 2 dollars e_t  n'aura  do_nc pas ses bonbons desires. Il devra s_e contenter d'ach_eter d_e l_a gomme.
+// charles goes to his school every morning in montreal, quebec, knowing that his dreams are about to be fulfilled.
+// Charles go_es t_o    his sch_ool every morning    i_n Montreal, Quebec, knowing th_at his dre_ams   are about t_o    b_e fulfilled.
+// what a beautiful day outside! it's almost like louis could touch some grass! 20/5 kilos on his lawn, to be precise.
+// What a beautiful day outside! It's alm_ost  li_ke Louis could   touch so_me grass! 4 kilos o_n his la_wn,    t_o	b_e precise.
