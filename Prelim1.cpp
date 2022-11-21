@@ -5,7 +5,6 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <string_view>
 
 using namespace std;
 // L'anglais est mis par defaut. Si vous voulez un affichage en francais,
