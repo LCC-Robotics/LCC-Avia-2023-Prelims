@@ -124,7 +124,7 @@ std::string solve(const std::string& testCase)
 
                 // Rule 5 - use tab as delimiter if the sum of the corresponding numerical value
                 //          of the letters is divisible by 5
-                if (alpha_len != 0 && total_value % 5 == 0) {
+                if (total_value != 0 && total_value % 5 == 0) {
                     delimiter = '\t';
                 }
             }
