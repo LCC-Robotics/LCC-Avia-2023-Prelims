@@ -51,8 +51,7 @@ std::string solve(const std::string& testCase)
             ? token.substr(0, token.size() - 1) // truncate last letter
             : token;
 
-        if (std::isdigit(token[0]))
-        {
+        if (std::isdigit(token[0])) {
             // Rule 1 - simplify math operations
             std::string temp = "";
             int arg1 = 0, arg2 = 0;
@@ -86,9 +85,7 @@ std::string solve(const std::string& testCase)
                     break;
                 }
             }
-        }
-        else if (!std::isupper(token[0]))
-        { // do not need to process words that begin with uppercase (rule 4 and 5 don't apply)
+        } else if (!std::isupper(token[0])) { // do not need to process words that begin with uppercase (rule 4 and 5 don't apply)
             if (
                 is_sentence_delimiter(prev_token.back()) || // Rule 2 - capitalize if the preceding token ends in punctuation
                 is_noun(word) // Rule 3 - capitalize if word is in list of nouns
@@ -260,4 +257,3 @@ int main()
 
     std::cout << "\nSolve Time: " << duration.count() << " ms" << std::endl;
 }
-
