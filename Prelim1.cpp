@@ -226,7 +226,7 @@ int main()
         "Dans l'or_dre naturel des cho_ses, 42 a touj_ours ete\tu_n\tnom_bre important. Peu importe l_e cont_exte, 42 repre_sente\tl_a ver_ite vraie.\t",
         "Etant riche d_e 15 dollars, Julie pe_ut s'ach_eter les bonbons d_e son choix! Son ami Jimmy, lui, possede 2 dollars e_t\tn'aura\tdo_nc pas ses bonbons desires. Il devra\ts_e contenter d'ach_eter d_e l_a gomme.",
         "Charles go_es t_o\this sch_ool every\tmorning\ti_n Montreal, Quebec, knowing th_at his dre_ams\tare about t_o\tb_e fulfilled.",
-        "What a beautiful day\toutside! It's alm_ost\tli_ke Louis could\ttouch so_me grass! 4 kilos o_n his la_wn,\tt_o	b_e precise.\t"
+        "What a beautiful day\toutside! It's alm_ost\tli_ke Louis could\ttouch so_me grass! 4 kilos o_n his la_wn,\tt_o\tb_e precise.\t"
     };
     /* Should look like this after the checkAnswer() method: / Devrait ressembler
     à ça après la fonction checkAnswer(): Dans l'or_dre naturel des cho_ses, 42 a
