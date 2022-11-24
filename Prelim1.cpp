@@ -47,7 +47,7 @@ std::string solve(const std::string& testCase)
 
     while (std::getline(iss, token, ' ')) { // parse word by word
         char delimiter = ' ';
-        std::string word = is_punctuation(token.back()) // Edge case: word still considered noun if there is punctuation at the end of token
+        std::string word = is_punctuation(token.back()) // Edge case: word still considered noun if there is punctuation at the end of token and unable to parse numbers if last letter is period.
             ? token.substr(0, token.size() - 1) // truncate last letter
             : token;
 
