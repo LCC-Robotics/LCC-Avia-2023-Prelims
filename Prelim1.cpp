@@ -19,11 +19,11 @@ std::string solve(const std::string& testCase)
         "andrae", "francois", "xavier", "elrik", "simon", "jeff", "charles"
     };
 
-    constexpr auto is_punctuation = [](char c) -> bool {
+    const auto is_punctuation = [](char c) constexpr -> bool {
         return (c == '_' || c == '-' || c == '\'' || c == ',' || c == '.' || c == '!' || c == '?');
     };
 
-    constexpr auto is_sentence_delimiter = [](char c) -> bool {
+    const auto is_sentence_delimiter = [](char c) constexpr -> bool {
         return (c == '.' || c == '?' || c == '!');
     };
 
