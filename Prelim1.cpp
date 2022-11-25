@@ -53,8 +53,8 @@ std::string solve(const std::string& testCase)
 
         if (std::isdigit(token[0])) {
             // Rule 1 - simplify math operations
-            std::string temp = "";
-            int arg1 = 0, arg2 = 0;
+            std::string temp;
+            int arg1, arg2;
             char op = 0;
 
             for (const char& c : word) {
