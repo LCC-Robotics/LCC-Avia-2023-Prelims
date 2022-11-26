@@ -19,10 +19,6 @@ std::string solve(const std::string& testCase)
         "andrae", "francois", "xavier", "elrik", "simon", "jeff", "charles"
     };
 
-    const auto is_punctuation = [](char c) -> bool {
-        return (c == '_' || c == '-' || c == '\'' || c == ',' || c == '.' || c == '!' || c == '?');
-    };
-
     const auto is_sentence_delimiter = [](char c) -> bool {
         return (c == '.' || c == '?' || c == '!');
     };
@@ -47,7 +43,7 @@ std::string solve(const std::string& testCase)
 
     while (std::getline(iss, token, ' ')) { // parse word by word
         char delimiter = ' ';
-        std::string word = is_punctuation(token.back()) // Edge case: word still considered noun if there is punctuation at the end of token and unable to parse numbers if last letter is period.
+        std::string word = std::ispunct(token.back()) // Edge case: word still considered noun if there is punctuation at the end of token and unable to parse numbers if last letter is period.
             ? token.substr(0, token.size() - 1) // truncate last letter
             : token;
 
@@ -100,7 +96,7 @@ std::string solve(const std::string& testCase)
                     // using one loop to do two things so efficient wor
                     if (c >= 'a' && c <= 'z') {
                         total_value += c - 'a' + 1;
-                    } else if (is_punctuation(c)) {
+                    } else if (std::ispunct(c)) {
                         alpha_len--;
                     }
                 }
@@ -111,7 +107,7 @@ std::string solve(const std::string& testCase)
                     int alpha_count = 0;
 
                     for (auto it = token.begin(); it < token.end(); it++) {
-                        if (!is_punctuation(*it)) {
+                        if (!std::ispunct(*it)) {
                             alpha_count++;
 
                             if (alpha_count == midpoint) {
