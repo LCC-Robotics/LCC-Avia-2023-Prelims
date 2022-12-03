@@ -11,3 +11,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_options(-Wall -Wpedantic -Wextra -fexceptions)
 
 add_executable(Prelim1 Prelim1.cpp)
+add_executable(Prelim2 Prelim2.cpp)
