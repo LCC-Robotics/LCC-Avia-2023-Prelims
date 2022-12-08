@@ -51,31 +51,8 @@ inline constexpr bool compare_float(float a, float b, float epsilon = 1.0e-8f)
     return std::abs(a - b) < epsilon;
 }
 
-Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string> CITIES_NAMES, const Matrix<int> cities_demand_supply, const Matrix<int> transport_costs)
+Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string>& CITIES_NAMES, const Matrix<int>& cities_demand_supply, const Matrix<int>& transport_costs)
 {
-    Matrix<std::string> transactions;
-
-    /*
-    https://www.hec.ca/en/cams/help/topics/The_steps_of_the_simplex_algorithm.pdf
-    https://www.youtube.com/watch?v=iwDiG2mR6FM
-    https://www.youtube.com/watch?v=pVWsXZh81IU
-    */
-
-    const int NBR_CONSTRAINTS = NBR_CITIES * 2;
-    const int NBR_DECISION_VARS = NBR_CITIES * NBR_CITIES;
-    const int& NBR_SLACK_VARS = NBR_CONSTRAINTS;
-    const int NBR_TOTAL_VARS = NBR_DECISION_VARS + NBR_SLACK_VARS + 1; // + 1 because of z variable
-
-    const int NBR_TABLEAU_ROWS = NBR_CONSTRAINTS + 1; // nbr of constraints + objective row
-    const int NBR_TABLEAU_COLS = NBR_TOTAL_VARS + 1; // nbr of variables + rhs row
-
-    const int& SLACK_SECTION_BEGIN = NBR_DECISION_VARS; // idex at which slack section begins
-    const int& RHS_COLUMN = NBR_TABLEAU_COLS - 1; // last column
-    const int& OBJECTIVE_ROW = NBR_TABLEAU_ROWS - 1; // last row
-
-    Matrix<float> tableau(NBR_TABLEAU_ROWS, std::vector<float>(NBR_TABLEAU_COLS, 0));
-    std::vector<int> basic(NBR_CONSTRAINTS); // keep track of basic variables, i is row, basic[i] is index of variable
-
     /*
     Example Tableau
 
@@ -110,7 +87,29 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string> C
         -> each city has an equation for max buying amount and max selling amount
     * Objective Function: function to maximize
         -> the coefficients of the decision variables is the net profit per unit
+
+    * Resources:
+        https://www.hec.ca/en/cams/help/topics/The_steps_of_the_simplex_algorithm.pdf
+        https://www.youtube.com/watch?v=iwDiG2mR6FM
+        https://www.youtube.com/watch?v=pVWsXZh81IU
     */
+
+    Matrix<std::string> transactions;
+
+    const int NBR_CONSTRAINTS = NBR_CITIES * 2;
+    const int NBR_DECISION_VARS = NBR_CITIES * NBR_CITIES;
+    const int& NBR_SLACK_VARS = NBR_CONSTRAINTS;
+    const int NBR_TOTAL_VARS = NBR_DECISION_VARS + NBR_SLACK_VARS + 1; // + 1 because of z variable
+
+    const int NBR_TABLEAU_ROWS = NBR_CONSTRAINTS + 1; // nbr of constraints + objective row
+    const int NBR_TABLEAU_COLS = NBR_TOTAL_VARS + 1; // nbr of variables + rhs row
+
+    const int& SLACK_SECTION_BEGIN = NBR_DECISION_VARS; // idex at which slack section begins
+    const int& RHS_COLUMN = NBR_TABLEAU_COLS - 1; // last column
+    const int& OBJECTIVE_ROW = NBR_TABLEAU_ROWS - 1; // last row
+
+    Matrix<float> tableau(NBR_TABLEAU_ROWS, std::vector<float>(NBR_TABLEAU_COLS, 0));
+    std::vector<int> basic(NBR_CONSTRAINTS); // keep track of basic variables, i is row, basic[i] is index of variable
 
     /*
     Format of cities_demand_supply:
