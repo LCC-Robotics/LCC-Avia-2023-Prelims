@@ -46,13 +46,14 @@ void printTableau(const Matrix<float>& tableau, const int nbr_objective, const i
     std::cout.copyfmt(old_state);
 }
 
+inline constexpr bool compare_float(float a, float b, float epsilon = 1.0e-8f)
+{
+    return std::abs(a - b) < epsilon;
+}
+
 Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string> CITIES_NAMES, const Matrix<int> cities_demand_supply, const Matrix<int> transport_costs)
 {
     Matrix<std::string> transactions;
-
-    constexpr auto compare_float = [](float a, float b, float epsilon = 1.0e-8f) {
-        return std::fabsf(a - b) < epsilon;
-    };
 
     /*
     https://www.hec.ca/en/cams/help/topics/The_steps_of_the_simplex_algorithm.pdf
@@ -203,7 +204,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string> C
         // Step 3: divide pivot row by pivot to make coefficient at pivot 1
         const float pivot_value = tableau[leaving][entering];
         for (int j = 0; j < NBR_TABLEAU_COLS; ++j) {
-            new_tableau[leaving][j] /= pivot_value; 
+            new_tableau[leaving][j] /= pivot_value;
         }
 
         // Step 4: Make it the rest of the values on the pivot row are zero to make pivot column basic
@@ -211,9 +212,9 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string> C
             if (i == leaving) // skip pivot row
                 continue;
             for (int j = 0; j < NBR_TABLEAU_COLS; ++j) {
-                // Gaussian Elimination: 
+                // Gaussian Elimination:
                 // new value = negative old value on pivot col * new value on pivot row + old value
-                new_tableau[i][j] -= tableau[i][entering] * new_tableau[leaving][j]; 
+                new_tableau[i][j] -= tableau[i][entering] * new_tableau[leaving][j];
             }
         }
 
