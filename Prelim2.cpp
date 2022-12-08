@@ -76,7 +76,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string> C
     std::vector<int> basic(NBR_CONSTRAINTS); // keep track of basic variables, i is row, basic[i] is index of variable
 
     /*
-    EXAMPLE TABLEAU
+    Example Tableau
 
        variable index   0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17   18   19   20   21   22   23   24    25
 
@@ -99,8 +99,16 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string> C
     OBJECTIVE_ROW ->    2    0    2    0    0    3    3    0    0    0    4    0    0    0    2    4    2    1    4    3    0    2    0    1    1│ 2040  <-- Max Profit
 
 
-    * Objective variables
-
+    * Decision Variables: Represents every possible permutation (total permutations = NBR_CITIES^2)
+        -> index = buyer * NBR_CITIES + seller
+        -> buyer = floor(index / NBR_CITIES)
+        -> seller = index % NBR_CITIES
+    * Slack Variables: Convert inequality to equality
+    * RHS Variables: The values of basic variables
+    * Constraints: Represents the limits on buying and selling amounts (total constraints = NBR_CITIES*2)
+        -> each city has an equation for max buying amount and max selling amount
+    * Objective Function: function to maximize
+        -> the coefficients of the decision variables is the net profit per unit
     */
 
     /*
@@ -130,7 +138,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string> C
                 continue;
 
             const int& selling_price = cities_demand_supply[seller_idx][3];
-            const int& transport_cost = transport_costs[seller_idx][buyer_idx]; // this has caused me immense headache
+            const int& transport_cost = transport_costs[seller_idx][buyer_idx]; // transport_costs[from][to]
 
             tableau[OBJECTIVE_ROW][idx] = -(buying_price - selling_price - transport_cost); // standard form
         }
@@ -140,7 +148,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string> C
         tableau[buyer_idx][RHS_COLUMN] = cities_demand_supply[buyer_idx][0]; // buying quantity
         tableau[NBR_CITIES + buyer_idx][RHS_COLUMN] = cities_demand_supply[buyer_idx][2]; // selling quantity
 
-        // slack variables - they will start as the basic variables
+        // Slack variables - initially set them as the basic variables
         tableau[buyer_idx][SLACK_SECTION_BEGIN + buyer_idx] = 1.0;
         tableau[NBR_CITIES + buyer_idx][SLACK_SECTION_BEGIN + NBR_CITIES + buyer_idx] = 1.0;
     }
