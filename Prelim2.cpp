@@ -119,7 +119,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string> C
     [3]: selling price
     */
 
-    // Optimized for loop which sets up and populates the matrices and vectors above
+    // Step 1: Set up tableau and determine basic feasible solution (set slack vars as basic vars)
     for (int buyer_idx = 0; buyer_idx < NBR_CITIES; ++buyer_idx) { // row
         const int& buying_price = cities_demand_supply[buyer_idx][1];
 
@@ -165,7 +165,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string> C
         // std::cout << "Iteration: " << iterations++ << '\n';
         // printTableau(tableau, NBR_OBJECTIVE_VARS, NBR_SLACK_VARS);
 
-        // Step 1: Identify pivot using Bland's rule (to avoid cycles goddamnit)
+        // Step 2: Identify pivot using Bland's rule (to avoid cycles goddamnit)
         int entering, leaving; // col, row
 
         // pivot_j is column with the smallest negative value
@@ -200,13 +200,13 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string> C
             }
         }
 
-        // Step 2: divide pivot row by pivot to make coefficient at pivot 1
+        // Step 3: divide pivot row by pivot to make coefficient at pivot 1
         const float pivot_value = tableau[leaving][entering];
         for (int j = 0; j < NBR_TABLEAU_COLS; ++j) {
             new_tableau[leaving][j] /= pivot_value; 
         }
 
-        // Step 3: Make it the rest of the values on the pivot row are zero to make pivot column basic
+        // Step 4: Make it the rest of the values on the pivot row are zero to make pivot column basic
         for (int i = 0; i < NBR_TABLEAU_ROWS; ++i) {
             if (i == leaving) // skip pivot row
                 continue;
