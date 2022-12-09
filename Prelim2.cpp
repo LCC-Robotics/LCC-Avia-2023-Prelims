@@ -167,7 +167,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
         // Step 2: Identify pivot using Bland's rule (to avoid cycles goddamnit)
         int entering, leaving; // col, row
 
-        // pivot_j is column with the smallest negative value
+        // enter variable is the non-basic var where its column has the smallest negative value
         int min_value = std::numeric_limits<int>::max();
         for (int j = 0; j < NBR_TOTAL_VARS; ++j) {
             auto value = tableau[OBJECTIVE_ROW][j];
@@ -182,7 +182,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
         if (min_value >= 0)
             break; // optimal solution is found
 
-        // pivot_i is the row where the rhs[i] divided by constraints[i][pivot_j] is the smallest
+        // leaving variable is the basic var where the row (i) has the smallest ratio (rhs[i] / constraints[i][leaving])
         int min_ratio = std::numeric_limits<int>::max();
         for (int i = 0; i < NBR_CONSTRAINTS; ++i) {
             if (tableau[i][entering] == 0)
@@ -200,9 +200,8 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
         }
 
         // Step 3: divide pivot row by pivot to make coefficient at pivot 1
-        const int pivot_value = tableau[leaving][entering];
         for (int j = 0; j < NBR_TABLEAU_COLS; ++j) {
-            new_tableau[leaving][j] *= pivot_value; // normally division, but dividing by ±1 is the same as multiplying
+            new_tableau[leaving][j] *= tableau[leaving][entering]; // normally division, but dividing by ±1 is the same as multiplying
         }
 
         // Step 4: Make it the rest of the values on the pivot row are zero to make pivot column basic
