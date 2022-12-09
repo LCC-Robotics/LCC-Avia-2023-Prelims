@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <initializer_list>
 #include <iomanip>
@@ -9,22 +10,19 @@
 #include <string>
 #include <vector>
 
-template <class T = float>
+template <class T>
+using Vector = std::vector<T>;
+template <class T>
 using Matrix = std::vector<std::vector<T>>;
 
-void printTableau(const Matrix<float>& tableau, const int nbr_objective, const int nbr_slack, const int precision = 4, const int cell_width = 5)
+void print_tableau(const Matrix<int>& tableau, const int NBR_OBJECTIVE_VARS, const int NBR_SLACK, const int cell_width = 5)
 {
-    std::ios old_state(nullptr);
-    old_state.copyfmt(std::cout);
-
-    const std::string hor_line((nbr_objective + nbr_slack + 2) * cell_width + 1, '-');
-
-    for (int obj_var = 0; obj_var < nbr_objective; ++obj_var) {
-        std::cout << std::setw(cell_width) << "x" + std::to_string(obj_var);
+    for (int obj_idx = 0; obj_idx < NBR_OBJECTIVE_VARS; ++obj_idx) {
+        std::cout << std::setw(cell_width) << "x" + std::to_string(obj_idx);
     }
 
-    for (int slack_var = 0; slack_var < nbr_slack; ++slack_var) {
-        std::cout << std::setw(cell_width) << "s" + std::to_string(slack_var);
+    for (int slack_idx = 0; slack_idx < NBR_SLACK; ++slack_idx) {
+        std::cout << std::setw(cell_width) << "s" + std::to_string(slack_idx);
     }
 
     std::cout << std::setw(cell_width) << "z";
@@ -32,26 +30,21 @@ void printTableau(const Matrix<float>& tableau, const int nbr_objective, const i
 
     for (auto row = tableau.begin(); row < tableau.end(); ++row) {
         if (row == tableau.end() - 1)
+            // print horizontal line
             std::cout << '\n'
-                      << hor_line;
+                      << std::string((NBR_OBJECTIVE_VARS + NBR_SLACK + 2) * cell_width + 1, '-');
 
         std::cout << '\n';
         for (auto cell = row->begin(); cell < row->end(); ++cell) {
             if (cell == row->end() - 1)
                 std::cout << "|";
-            std::cout << std::setw(cell_width) << std::setprecision(precision) << *cell;
+            std::cout << std::setw(cell_width) << *cell;
         }
     }
     std::cout << std::endl;
-    std::cout.copyfmt(old_state);
 }
 
-inline constexpr bool compare_float(float a, float b, float epsilon = 1.0e-8f)
-{
-    return std::abs(a - b) < epsilon;
-}
-
-Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string>& CITIES_NAMES, const Matrix<int>& cities_demand_supply, const Matrix<int>& transport_costs)
+Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIES_NAMES, const Matrix<int>& cities_demand_supply, const Matrix<int>& transport_costs)
 {
     /*
     Example Tableau
@@ -108,8 +101,11 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string>& 
     const int& RHS_COLUMN = NBR_TABLEAU_COLS - 1; // last column
     const int& OBJECTIVE_ROW = NBR_TABLEAU_ROWS - 1; // last row
 
-    Matrix<float> tableau(NBR_TABLEAU_ROWS, std::vector<float>(NBR_TABLEAU_COLS, 0));
-    std::vector<int> basic(NBR_CONSTRAINTS); // keep track of basic variables, i is row, basic[i] is index of variable
+    // since all constraint coefficients are 1 or -1 and a / ±1 = ±a, we can use int instead of floating point representations ()
+    Matrix<int> tableau(NBR_TABLEAU_ROWS, Vector<int>(NBR_TABLEAU_COLS, 0)); // there is probably a less convoluted way to do this but if it ain't broke don't fix it
+
+    Vector<int> basic(NBR_CONSTRAINTS); // keep track of basic variables, i is row, basic[i] is index of variable
+    Vector<bool> is_basic(NBR_TOTAL_VARS, false);
 
     /*
     Format of cities_demand_supply:
@@ -124,13 +120,13 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string>& 
         const int& buying_price = cities_demand_supply[buyer_idx][1];
 
         for (int seller_idx = 0; seller_idx < NBR_CITIES; ++seller_idx) { // col
-            int idx = buyer_idx * NBR_CITIES + seller_idx;
+            int var_idx = buyer_idx * NBR_CITIES + seller_idx;
 
             // set up constraints coefficients
             // for each city, a equation can be set up for limiting buying quantity and one for limiting selling quantity
-            tableau[buyer_idx][idx] = 1.0; // equation for limited buying quantity
+            tableau[buyer_idx][var_idx] = 1; // equation for limited buying quantity
             if (seller_idx * NBR_CITIES + buyer_idx < NBR_DECISION_VARS) {
-                tableau[buyer_idx + NBR_CITIES][seller_idx * NBR_CITIES + buyer_idx] = 1.0; // equation for limited selling quantity
+                tableau[buyer_idx + NBR_CITIES][seller_idx * NBR_CITIES + buyer_idx] = 1; // equation for limited selling quantity
             }
 
             // buyer and seller cannot be the same city.
@@ -140,7 +136,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string>& 
             const int& selling_price = cities_demand_supply[seller_idx][3];
             const int& transport_cost = transport_costs[seller_idx][buyer_idx]; // transport_costs[from][to]
 
-            tableau[OBJECTIVE_ROW][idx] = -(buying_price - selling_price - transport_cost); // standard form
+            tableau[OBJECTIVE_ROW][var_idx] = -(buying_price - selling_price - transport_cost); // standard form
         }
 
         // Since NBR_CONSRTAINTS = NBR_CITIES * 2, we initialize 2 rhs and 2 slack variables per iteration of for loop
@@ -149,31 +145,34 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string>& 
         tableau[NBR_CITIES + buyer_idx][RHS_COLUMN] = cities_demand_supply[buyer_idx][2]; // selling quantity
 
         // Slack variables - initially set them as the basic variables
-        tableau[buyer_idx][SLACK_SECTION_BEGIN + buyer_idx] = 1.0;
-        tableau[NBR_CITIES + buyer_idx][SLACK_SECTION_BEGIN + NBR_CITIES + buyer_idx] = 1.0;
+        tableau[buyer_idx][SLACK_SECTION_BEGIN + buyer_idx] = 1;
+        tableau[NBR_CITIES + buyer_idx][SLACK_SECTION_BEGIN + NBR_CITIES + buyer_idx] = 1;
     }
 
-    std::iota(basic.begin(), basic.end(), SLACK_SECTION_BEGIN); // set slack variables as basic
+    tableau[OBJECTIVE_ROW][RHS_COLUMN - 1] = 1; // set z
 
-    tableau[OBJECTIVE_ROW][RHS_COLUMN - 1] = 1.0; // set z
+    std::iota(basic.begin(), basic.end(), SLACK_SECTION_BEGIN); // set slack variables as basic
+    std::for_each(basic.begin(), basic.end(), [&](auto v) { is_basic[v] = true; });
+
+    // print_tableau(tableau, NBR_DECISION_VARS, NBR_SLACK_VARS);
 
     // Simplex time!
-    Matrix<float> new_tableau(tableau); // create copy
+    Matrix<int> new_tableau(tableau); // create copy
 
     // int iterations = 0;
     while (true) {
         // std::cout << "Iteration: " << iterations++ << '\n';
-        // printTableau(tableau, NBR_OBJECTIVE_VARS, NBR_SLACK_VARS);
+        // print_tableau(tableau, NBR_DECISION_VARS, NBR_SLACK_VARS);
 
         // Step 2: Identify pivot using Bland's rule (to avoid cycles goddamnit)
         int entering, leaving; // col, row
 
         // pivot_j is column with the smallest negative value
-        float min_value = std::numeric_limits<float>::infinity();
+        int min_value = std::numeric_limits<int>::max();
         for (int j = 0; j < NBR_TOTAL_VARS; ++j) {
             auto value = tableau[OBJECTIVE_ROW][j];
             if (value < min_value
-                && std::find(basic.begin(), basic.end(), j) == basic.end() // Bland's rule: Pivot only on non-basic columns
+                && !is_basic[j] // Bland's rule: Pivot only on non-basic columns
             ) {
                 min_value = value;
                 entering = j;
@@ -184,12 +183,12 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string>& 
             break; // optimal solution is found
 
         // pivot_i is the row where the rhs[i] divided by constraints[i][pivot_j] is the smallest
-        float min_ratio = std::numeric_limits<float>::infinity();
+        int min_ratio = std::numeric_limits<int>::max();
         for (int i = 0; i < NBR_CONSTRAINTS; ++i) {
-            if (compare_float(tableau[i][entering], 0.0))
+            if (tableau[i][entering] == 0)
                 continue;
 
-            float ratio = tableau[i][RHS_COLUMN] / tableau[i][entering];
+            int ratio = tableau[i][RHS_COLUMN] / tableau[i][entering];
 
             if (
                 (ratio < min_ratio && tableau[i][entering] > 0) // min ratio test
@@ -201,9 +200,9 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string>& 
         }
 
         // Step 3: divide pivot row by pivot to make coefficient at pivot 1
-        const float pivot_value = tableau[leaving][entering];
+        const int pivot_value = tableau[leaving][entering];
         for (int j = 0; j < NBR_TABLEAU_COLS; ++j) {
-            new_tableau[leaving][j] /= pivot_value;
+            new_tableau[leaving][j] *= pivot_value; // normally division, but dividing by ±1 is the same as multiplying
         }
 
         // Step 4: Make it the rest of the values on the pivot row are zero to make pivot column basic
@@ -211,17 +210,22 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string>& 
             if (i == leaving) // skip pivot row
                 continue;
             for (int j = 0; j < NBR_TABLEAU_COLS; ++j) {
-                // Gaussian Elimination:
+                // Gaussian Elimination: https://en.wikipedia.org/wiki/Gaussian_elimination˝
                 // new value = negative old value on pivot col * new value on pivot row + old value
                 new_tableau[i][j] -= tableau[i][entering] * new_tableau[leaving][j];
             }
         }
 
+        // update tableau with new basic feasible solution
         tableau = new_tableau;
-        basic[leaving] = entering; // update basic vars
+
+        // update basic vars
+        basic[leaving] = entering;
+        is_basic[leaving] = false;
+        is_basic[entering] = true;
     }
 
-    // printTableau(tableau, NBR_OBJECTIVE_VARS, NBR_SLACK_VARS);
+    // print_tableau(tableau, NBR_DECISION_VARS, NBR_SLACK_VARS);
 
     /*
     Populate transactions with the results
@@ -250,19 +254,18 @@ Matrix<std::string> solve(const int NBR_CITIES, const std::vector<std::string>& 
     return transactions;
 }
 
-using namespace std;
 // L'anglais est mis par defaut. Si vous voulez un affichage en francais, changez le string de la ligne precedente pour "FR"
-string CONSOLE_LANGUAGE = "ENG";
+std::string CONSOLE_LANGUAGE = "ENG";
 // will stop testing at the first problem in the transactions / permet d'arreter de tester si le programme detecte une mauvaise transaction
 bool STOP_TESTS_ON_ERROR = false;
 
 // DO NOT MODIFY AFTER THIS LINE / NE PAS MODIFIER APRES CETTE LIGNE
-void printTransaction(const int idx, const vector<vector<string>>& TRANSACTIONS)
+void printTransaction(const int idx, const std::vector<std::vector<std::string>>& TRANSACTIONS)
 {
-    cout << "[\"" << TRANSACTIONS[idx][0] << "\", \"" << TRANSACTIONS[idx][1] << "\", \"" << TRANSACTIONS[idx][2] << "\"]";
+    std::cout << "[\"" << TRANSACTIONS[idx][0] << "\", \"" << TRANSACTIONS[idx][1] << "\", \"" << TRANSACTIONS[idx][2] << "\"]";
 }
 
-int getCityIdx(string cityName, const int NBR_CITIES, const vector<string>& CITIES_NAMES)
+int getCityIdx(std::string cityName, const int NBR_CITIES, const std::vector<std::string>& CITIES_NAMES)
 {
     for (int i = 0; i < NBR_CITIES; i++) {
         if (cityName.compare(CITIES_NAMES[i]) == 0)
@@ -271,51 +274,48 @@ int getCityIdx(string cityName, const int NBR_CITIES, const vector<string>& CITI
     return -1;
 }
 
-bool checkAnswer(const vector<vector<string>>& TRANSACTIONS, const int NBR_CITIES, const vector<string>& CITIES_NAMES, vector<vector<int>> demand_supply, const vector<vector<int>>& transport)
+bool checkAnswer(const std::vector<std::vector<std::string>>& TRANSACTIONS, const int NBR_CITIES, const std::vector<std::string>& CITIES_NAMES, std::vector<std::vector<int>> demand_supply, const std::vector<std::vector<int>>& transport)
 {
     bool fr = CONSOLE_LANGUAGE.compare("FR") == 0;
-    string output;
+    std::string output;
     int nbr_tr = TRANSACTIONS.size();
     int profit = 0;
 
     // check if there's at least one transaction / regarde s'il y a au moins une transaction
     if (nbr_tr == 0) {
-        output = fr ? "Vous n'avez fait aucune transaction" : "You have made no transactions";
-        cout << output << endl;
+        std::cout << (fr ? "Vous n'avez fait aucune transaction" : "You have made no transactions")
+                  << std::endl;
         return false;
     }
     // check if the format of the transactions / regarde le formatage des transactions
-    for (vector<string> transaction : TRANSACTIONS) {
+    for (std::vector<std::string> transaction : TRANSACTIONS) {
         if (transaction.size() != 3) {
-            output = fr ? "Une transaction ne suit pas le bon format" : "A transaction doesn't have the right format";
-            cout << output << endl;
+            std::cout << (fr ? "Une transaction ne suit pas le bon format" : "A transaction doesn't have the right format")
+                      << std::endl;
             return false;
         }
     }
 
     // quick display of your output / petit affichage de votre sortie
-    output = fr ? "Votre Sortie:" : "Your Output:";
-    cout << output << endl;
+    std::cout << (fr ? "Votre Sortie:" : "Your Output:") << "\n";
     for (int i = 0; i < nbr_tr; i++) {
         printTransaction(i, TRANSACTIONS);
-        cout << endl;
+        std::cout << "\n";
     }
-    cout << endl;
+    std::cout << "\n";
 
     for (int i = 0; i < nbr_tr; i++) {
         int amount = 0;
         try {
-            amount = stoi(TRANSACTIONS[i][2]);
+            amount = std::stoi(TRANSACTIONS[i][2]);
             if (amount < 0) {
                 // check for positive amount / regarde pour quantites positives
-                output = fr ? "La quantite d'unites doit etre positive" : "The quantity needs to be positive";
-                cout << output << endl;
+                std::cout << (fr ? "La quantite d'unites doit etre positive" : "The quantity needs to be positive") << std::endl;
                 return false;
             }
         } catch (...) {
             // check if quantity is a number / regarde si la quantite est un nombre
-            output = fr ? "La quantite d'unites n'est pas un entier" : "The quantity is not an integer";
-            cout << output << endl;
+            std::cout << (fr ? "La quantite d'unites n'est pas un entier" : "The quantity is not an integer") << std::endl;
             return false;
         }
 
@@ -325,18 +325,16 @@ bool checkAnswer(const vector<vector<string>>& TRANSACTIONS, const int NBR_CITIE
 
         // check if a city is invalid / regarde si une ville est invalide
         if (receiverIdx == -1 || senderIdx == -1) {
-            cout << "Transaction ";
+            std::cout << "Transaction ";
             printTransaction(i, TRANSACTIONS);
-            output = fr ? " contient une ville non-existante" : " has an invalid city name";
-            cout << output << endl;
+            std::cout << (fr ? " contient une ville non-existante" : " has an invalid city name") << std::endl;
             return false;
         }
         // check if transaction is with itself / regarde si la transaction contient seulement une ville
         if (receiverIdx == senderIdx) {
-            cout << "Transaction ";
+            std::cout << "Transaction ";
             printTransaction(i, TRANSACTIONS);
-            output = fr ? " contient deux fois la meme ville" : " has the same city twice";
-            cout << output << endl;
+            std::cout << (fr ? " contient deux fois la meme ville" : " has the same city twice") << std::endl;
             return false;
         }
 
@@ -346,19 +344,21 @@ bool checkAnswer(const vector<vector<string>>& TRANSACTIONS, const int NBR_CITIE
 
         // check for max capacity of receiver / regarde que la capacite maximale du demandeur est correcte
         if (demand_supply[receiverIdx][0] < 0) {
-            cout << "Transaction ";
+            std::cout << "Transaction ";
             printTransaction(i, TRANSACTIONS);
-            output = fr ? "\nDépasse la capacité d'achat de la ville de " : "\nExceeds the quantity that can be bought by ";
-            cout << output << CITIES_NAMES[receiverIdx] << endl;
+            std::cout << (fr ? "\nDépasse la capacité d'achat de la ville de " : "\nExceeds the quantity that can be bought by ")
+                      << CITIES_NAMES[receiverIdx]
+                      << std::endl;
             return false;
         }
 
         // check for max capacity of the sender / regarde pour etre correct avec la capacite maximale
         if (demand_supply[senderIdx][2] < 0) {
-            cout << "Transaction ";
+            std::cout << "Transaction ";
             printTransaction(i, TRANSACTIONS);
-            output = fr ? "\nDépasse la capacité de vente de la ville de " : "\nExceeds the quantity that can be selled by ";
-            cout << output << CITIES_NAMES[senderIdx] << endl;
+            std::cout << (fr ? "\nDépasse la capacité de vente de la ville de " : "\nExceeds the quantity that can be selled by ")
+                      << CITIES_NAMES[senderIdx]
+                      << std::endl;
             return false;
         }
 
@@ -366,17 +366,16 @@ bool checkAnswer(const vector<vector<string>>& TRANSACTIONS, const int NBR_CITIE
         int transactionProfit = (demand_supply[receiverIdx][1] - demand_supply[senderIdx][3] - transport[senderIdx][receiverIdx]) * amount;
 
         // transaction validation ouput / sortie de validation de transaction
-        cout << "Transaction ";
+        std::cout << "Transaction ";
         printTransaction(i, TRANSACTIONS);
-        output = fr ? " autorisée!\nProfit fait par cette transaction: " : " authorized\nProfit made by this transaction: ";
-        cout << output << transactionProfit << "$" << endl;
+        std::cout << (fr ? " autorisée!\nProfit fait par cette transaction: " : " authorized\nProfit made by this transaction: ") << transactionProfit << "$"
+                  << "\n";
         profit += transactionProfit;
     }
 
-    output = fr ? "Profit total obtenu: " : "Total profit made: ";
-    cout << endl
-         << output << profit << "$" << endl
-         << endl;
+    std::cout << (fr ? "\nProfit total obtenu: " : "\nTotal profit made: ")
+              << profit << "$"
+              << "\n";
     return true;
 }
 
@@ -384,9 +383,9 @@ int main()
 {
     const int nbr_cases = 5;
     const bool test[5] = { true, true, true, true, true };
-    vector<vector<string>> CITIES_NAMES(nbr_cases);
-    vector<vector<vector<int>>> CITIES_DEMAND_SUPPLY(nbr_cases);
-    vector<vector<vector<int>>> TRANSPORT_COST(nbr_cases);
+    std::vector<std::vector<std::string>> CITIES_NAMES(nbr_cases);
+    std::vector<std::vector<std::vector<int>>> CITIES_DEMAND_SUPPLY(nbr_cases);
+    std::vector<std::vector<std::vector<int>>> TRANSPORT_COST(nbr_cases);
     bool passed = true;
 
     // test cases / cas de test
@@ -412,26 +411,37 @@ int main()
     CITIES_DEMAND_SUPPLY[4] = { { 50, 104, 130, 97 }, { 220, 104, 160, 98 }, { 170, 104, 140, 98 }, { 210, 102, 120, 97 }, { 210, 103, 60, 97 }, { 120, 102, 120, 97 }, { 70, 101, 60, 100 }, { 110, 104, 140, 97 }, { 130, 104, 90, 100 }, { 170, 103, 80, 98 }, { 70, 101, 120, 97 }, { 100, 103, 250, 98 } };
     TRANSPORT_COST[4] = { { 0, 2, 1, 2, 3, 3, 1, 1, 1, 3, 3, 3 }, { 1, 0, 3, 2, 3, 2, 2, 2, 1, 1, 1, 3 }, { 1, 2, 0, 1, 2, 2, 1, 3, 3, 2, 2, 1 }, { 3, 1, 1, 0, 1, 3, 1, 3, 3, 3, 1, 1 }, { 1, 3, 3, 1, 0, 1, 3, 1, 3, 2, 1, 3 }, { 3, 2, 1, 2, 3, 0, 1, 2, 1, 2, 3, 1 }, { 3, 2, 1, 2, 2, 2, 0, 3, 3, 3, 2, 3 }, { 1, 2, 1, 3, 2, 3, 1, 0, 3, 3, 3, 2 }, { 2, 2, 1, 2, 1, 3, 3, 2, 0, 2, 2, 3 }, { 1, 3, 1, 3, 1, 2, 2, 2, 3, 0, 1, 1 }, { 3, 1, 1, 3, 2, 3, 2, 3, 1, 1, 0, 2 }, { 3, 1, 1, 1, 1, 3, 2, 2, 1, 2, 1, 0 } };
 
+    using Clock = std::chrono::high_resolution_clock;
+    using Ms = std::chrono::duration<float, std::chrono::milliseconds::period>;
+
     // calls your code / appel de votre code
     for (int i = 0; i < nbr_cases; i++) {
         if (!test[i])
             continue;
 
+        auto start = Clock::now();
         auto result = solve(NBR_CITIES[i], CITIES_NAMES[i], CITIES_DEMAND_SUPPLY[i], TRANSPORT_COST[i]);
-        cout << endl
-             << "Test " << (i + 1) << endl
-             << endl;
+        Ms solve_time = Clock::now() - start;
+
+        std::cout << "\n"
+                  << "Test " << (i + 1) << "\n\n";
         passed &= checkAnswer(result, NBR_CITIES[i], CITIES_NAMES[i], CITIES_DEMAND_SUPPLY[i], TRANSPORT_COST[i]);
+        std::cout << (CONSOLE_LANGUAGE == "FR" ? "Temps de Résolution: " : "Solve Time: ")
+                  << std::fixed << std::setprecision(3)
+                  << solve_time.count() << "ms"
+                  << "\n\n";
+
         if (STOP_TESTS_ON_ERROR && !passed)
-            break;
+            return 1;
     }
 
     // final output / affichage final
-    string output;
+    std::string output;
     if (passed)
-        output = CONSOLE_LANGUAGE == "FR" ? "Tout a l'air bon!\n" : "Everything seems good!\n";
+        std::cout << (CONSOLE_LANGUAGE == "FR" ? "Tout a l'air bon!\n" : "Everything seems good!\n");
     else
-        output = CONSOLE_LANGUAGE == "FR" ? "Il semble y avoir un problème avec certaines sorties.\n" : "There seems to be a problem in the outputs somewhere.\n";
-    cout << endl
-         << output;
+        std::cout << (CONSOLE_LANGUAGE == "FR" ? "Il semble y avoir un problème avec certaines sorties.\n" : "There seems to be a problem in the outputs somewhere.\n");
+
+    std::cout << std::endl; // flush
+    return 0;
 }
