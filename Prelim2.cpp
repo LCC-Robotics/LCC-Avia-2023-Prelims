@@ -98,8 +98,8 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
     const int NBR_TABLEAU_COLS = NBR_TOTAL_VARS + 1; // nbr of variables + rhs row
 
     const int& SLACK_SECTION_BEGIN = NBR_DECISION_VARS; // idex at which slack section begins
-    const int& RHS_COLUMN = NBR_TABLEAU_COLS - 1; // last column
-    const int& OBJECTIVE_ROW = NBR_TABLEAU_ROWS - 1; // last row
+    const int RHS_COLUMN = NBR_TABLEAU_COLS - 1; // last column
+    const int OBJECTIVE_ROW = NBR_TABLEAU_ROWS - 1; // last row
 
     // since all constraint coefficients are 1 or -1 and a / ±1 = ±a, we can use int instead of floating point representations ()
     Matrix<int> tableau(NBR_TABLEAU_ROWS, Vector<int>(NBR_TABLEAU_COLS, 0)); // there is probably a less convoluted way to do this but if it ain't broke don't fix it
@@ -152,7 +152,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
     tableau[OBJECTIVE_ROW][RHS_COLUMN - 1] = 1; // set z
 
     std::iota(basic.begin(), basic.end(), SLACK_SECTION_BEGIN); // set slack variables as basic
-    std::for_each(basic.begin(), basic.end(), [&](auto v) { is_basic[v] = true; });
+    std::for_each(basic.begin(), basic.end(), [&](auto v) { is_basic[v] = true; }); // update is_basic
 
     // print_tableau(tableau, NBR_DECISION_VARS, NBR_SLACK_VARS);
 
@@ -182,7 +182,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
         if (min_value >= 0)
             break; // optimal solution is found
 
-        // leaving variable is the basic var where the row (i) has the smallest ratio (rhs[i] / constraints[i][leaving])
+        // leaving variable is the basic var which has the smallest ratio between its value and the value on the pivot column
         int min_ratio = std::numeric_limits<int>::max();
         for (int i = 0; i < NBR_CONSTRAINTS; ++i) {
             if (tableau[i][entering] == 0)
@@ -201,10 +201,10 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
 
         // Step 3: divide pivot row by pivot to make coefficient at pivot 1
         for (int j = 0; j < NBR_TABLEAU_COLS; ++j) {
-            new_tableau[leaving][j] *= tableau[leaving][entering]; // normally division, but dividing by ±1 is the same as multiplying
+            new_tableau[leaving][j] *= tableau[leaving][entering]; // normally division, but dividing by +/- 1 is the same as multiplying
         }
 
-        // Step 4: Make it the rest of the values on the pivot row are zero to make pivot column basic
+        // Step 4: Make the rest of the values on the pivot column zero to turn entering var basic
         for (int i = 0; i < NBR_TABLEAU_ROWS; ++i) {
             if (i == leaving) // skip pivot row
                 continue;
