@@ -165,7 +165,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
         // print_tableau(tableau, NBR_DECISION_VARS, NBR_SLACK_VARS);
 
         // Step 2: Identify pivot using Bland's rule (to avoid cycles goddamnit)
-        int entering, leaving; // col, row
+        int pivot_row, pivot_col; // col, row
 
         // enter variable is the non-basic var where its column has the smallest negative value
         int min_value = std::numeric_limits<int>::max();
@@ -175,7 +175,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
                 && !is_basic[j] // Bland's rule: Pivot only on non-basic columns
             ) {
                 min_value = value;
-                entering = j;
+                pivot_col = j;
             }
         }
 
@@ -185,33 +185,36 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
         // leaving variable is the basic var which has the smallest ratio between its value and the value on the pivot column
         int min_ratio = std::numeric_limits<int>::max();
         for (int i = 0; i < NBR_CONSTRAINTS; ++i) {
-            if (tableau[i][entering] == 0)
+            if (tableau[i][pivot_col] == 0)
                 continue;
 
-            int ratio = tableau[i][RHS_COLUMN] / tableau[i][entering];
+            int ratio = tableau[i][RHS_COLUMN] / tableau[i][pivot_col];
 
             if (
-                (ratio < min_ratio && tableau[i][entering] > 0) // min ratio test
-                || (ratio == min_ratio && i < leaving) // Bland's rule: When there is a tie (degeneracy), choose the variable with a lower index
+                (ratio < min_ratio && tableau[i][pivot_col] > 0) // min ratio test
+                || (ratio == min_ratio && i < basic[pivot_row]) // Bland's rule: When there is a tie (degeneracy), choose the variable with a lower index
             ) {
                 min_ratio = ratio;
-                leaving = i;
+                pivot_row = i;
             }
         }
 
+        const int entering = pivot_col;
+        const int leaving = basic[pivot_row];
+
         // Step 3: divide pivot row by pivot to make coefficient at pivot 1
         for (int j = 0; j < NBR_TABLEAU_COLS; ++j) {
-            new_tableau[leaving][j] *= tableau[leaving][entering]; // normally division, but dividing by +/- 1 is the same as multiplying
+            new_tableau[pivot_row][j] *= tableau[pivot_row][pivot_col]; // normally division, but dividing by +/- 1 is the same as multiplying
         }
 
         // Step 4: Make the rest of the values on the pivot column zero to turn entering var basic
         for (int i = 0; i < NBR_TABLEAU_ROWS; ++i) {
-            if (i == leaving) // skip pivot row
+            if (i == pivot_row) // skip pivot row
                 continue;
             for (int j = 0; j < NBR_TABLEAU_COLS; ++j) {
                 // Gaussian Elimination: https://en.wikipedia.org/wiki/Gaussian_elimination˝
                 // new value = negative old value on pivot col * new value on pivot row + old value
-                new_tableau[i][j] -= tableau[i][entering] * new_tableau[leaving][j];
+                new_tableau[i][j] -= tableau[i][pivot_col] * new_tableau[pivot_row][j];
             }
         }
 
@@ -219,12 +222,13 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
         tableau = new_tableau;
 
         // update basic vars
-        basic[leaving] = entering;
+        basic[pivot_row] = entering;
         is_basic[leaving] = false;
         is_basic[entering] = true;
     }
-
+    
     // print_tableau(tableau, NBR_DECISION_VARS, NBR_SLACK_VARS);
+    // std::cout << is_basic[51] << " " << is_basic[52];
 
     /*
     Populate transactions with the results
