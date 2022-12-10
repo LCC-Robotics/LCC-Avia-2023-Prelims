@@ -91,17 +91,17 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
 
     const int NBR_CONSTRAINTS = NBR_CITIES * 2;
     const int NBR_DECISION_VARS = NBR_CITIES * NBR_CITIES;
-    const int& NBR_SLACK_VARS = NBR_CONSTRAINTS;
-    const int NBR_TOTAL_VARS = NBR_DECISION_VARS + NBR_SLACK_VARS + 1; // + 1 because of z variable
+    const int NBR_SLACK_VARS = NBR_CONSTRAINTS;
+    const int NBR_TOTAL_VARS = NBR_DECISION_VARS + NBR_SLACK_VARS + 1; // +1 because of z variable
 
     const int NBR_TABLEAU_ROWS = NBR_CONSTRAINTS + 1; // nbr of constraints + objective row
     const int NBR_TABLEAU_COLS = NBR_TOTAL_VARS + 1; // nbr of variables + rhs row
 
-    const int& SLACK_SECTION_BEGIN = NBR_DECISION_VARS; // idex at which slack section begins
+    const int SLACK_SECTION_BEGIN = NBR_DECISION_VARS; // idex at which slack section begins
     const int RHS_COLUMN = NBR_TABLEAU_COLS - 1; // last column
     const int OBJECTIVE_ROW = NBR_TABLEAU_ROWS - 1; // last row
 
-    // since all constraint coefficients are 1 or -1 and a / ±1 = ±a, we can use int instead of floating point representations ()
+    // since all constraint coefficients are 1 or -1 and (a / ±1 = ±a), we can use int instead of floating point representations ()
     Matrix<int> tableau(NBR_TABLEAU_ROWS, Vector<int>(NBR_TABLEAU_COLS, 0)); // there is probably a less convoluted way to do this but if it ain't broke don't fix it
 
     Vector<int> basic(NBR_CONSTRAINTS); // keep track of basic variables, i is row, basic[i] is index of variable
@@ -204,7 +204,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
 
         // Step 3: divide pivot row by pivot to make coefficient at pivot 1
         for (int j = 0; j < NBR_TABLEAU_COLS; ++j) {
-            new_tableau[pivot_row][j] *= tableau[pivot_row][pivot_col]; // normally division, but dividing by +/- 1 is the same as multiplying
+            new_tableau[pivot_row][j] *= tableau[pivot_row][pivot_col]; // normally division, but dividing by ±1 is the same as multiplying by ±1
         }
 
         // Step 4: Make the rest of the values on the pivot column zero to turn entering var basic
