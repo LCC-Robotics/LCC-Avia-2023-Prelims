@@ -92,7 +92,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
     const int NBR_CONSTRAINTS = NBR_CITIES * 2;
     const int NBR_DECISION_VARS = NBR_CITIES * NBR_CITIES;
     const int NBR_SLACK_VARS = NBR_CONSTRAINTS;
-    const int NBR_TOTAL_VARS = NBR_DECISION_VARS + NBR_SLACK_VARS; // +1 because of z variable
+    const int NBR_TOTAL_VARS = NBR_DECISION_VARS + NBR_SLACK_VARS; 
 
     const int NBR_TABLEAU_ROWS = NBR_CONSTRAINTS + 1; // nbr of constraints + objective row
     const int NBR_TABLEAU_COLS = NBR_TOTAL_VARS + 1; // nbr of variables + rhs row
