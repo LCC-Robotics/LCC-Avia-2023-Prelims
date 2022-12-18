@@ -92,7 +92,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
     const int NBR_CONSTRAINTS = NBR_CITIES * 2;
     const int NBR_DECISION_VARS = NBR_CITIES * NBR_CITIES;
     const int NBR_SLACK_VARS = NBR_CONSTRAINTS;
-    const int NBR_TOTAL_VARS = NBR_DECISION_VARS + NBR_SLACK_VARS + 1; // +1 because of z variable
+    const int NBR_TOTAL_VARS = NBR_DECISION_VARS + NBR_SLACK_VARS; // +1 because of z variable
 
     const int NBR_TABLEAU_ROWS = NBR_CONSTRAINTS + 1; // nbr of constraints + objective row
     const int NBR_TABLEAU_COLS = NBR_TOTAL_VARS + 1; // nbr of variables + rhs row
@@ -149,7 +149,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
         tableau[NBR_CITIES + buyer_idx][SLACK_SECTION_BEGIN + NBR_CITIES + buyer_idx] = 1;
     }
 
-    tableau[OBJECTIVE_ROW][RHS_COLUMN - 1] = 1; // set z
+    // tableau[OBJECTIVE_ROW][RHS_COLUMN - 1] = 1; // set z
 
     std::iota(basic.begin(), basic.end(), SLACK_SECTION_BEGIN); // set slack variables as basic
     std::for_each(basic.begin(), basic.end(), [&](auto v) { is_basic[v] = true; }); // update is_basic
@@ -167,13 +167,12 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
         // Step 2: Identify pivot using Bland's rule (to avoid cycles goddamnit)
         int pivot_row, pivot_col; // col, row
 
-        // enter variable is the non-basic var where its column has the smallest negative value
+        // Bland's rule: Choose entering variable as the smallest nonbasic column with a negative cost.
         int min_value = std::numeric_limits<int>::max();
         for (int j = 0; j < NBR_TOTAL_VARS; ++j) {
             auto value = tableau[OBJECTIVE_ROW][j];
-            if (value < min_value
-                && !is_basic[j] // Bland's rule: Pivot only on non-basic columns
-            ) {
+
+            if (!is_basic[j] && value < min_value) {
                 min_value = value;
                 pivot_col = j;
             }
@@ -182,7 +181,10 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
         if (min_value >= 0)
             break; // optimal solution is found
 
-        // leaving variable is the basic var which has the smallest ratio between its value and the value on the pivot column
+        // Bland's Rule: choose the one with the lowest ratio between the right 
+        // hand side and the coefficient in the pivot tableau where the coefficient 
+        // is greater than zero. If the minimum ratio is shared by several rows, 
+        // choose the row with the lowest-numbered column basic in it
         int min_ratio = std::numeric_limits<int>::max();
         for (int i = 0; i < NBR_CONSTRAINTS; ++i) {
             if (tableau[i][pivot_col] == 0)
@@ -190,10 +192,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
 
             int ratio = tableau[i][RHS_COLUMN] / tableau[i][pivot_col];
 
-            if (
-                (ratio < min_ratio && tableau[i][pivot_col] > 0) // min ratio test
-                || (ratio == min_ratio && i < basic[pivot_row]) // Bland's rule: When there is a tie (degeneracy), choose the variable with a lower index
-            ) {
+            if (ratio < min_ratio && tableau[i][pivot_col] > 0) {
                 min_ratio = ratio;
                 pivot_row = i;
             }
@@ -226,7 +225,7 @@ Matrix<std::string> solve(const int NBR_CITIES, const Vector<std::string>& CITIE
         is_basic[leaving] = false;
         is_basic[entering] = true;
     }
-    
+
     // print_tableau(tableau, NBR_DECISION_VARS, NBR_SLACK_VARS);
     // std::cout << is_basic[51] << " " << is_basic[52];
 
