@@ -40,6 +40,7 @@ std::string solve(const std::string& testCase)
     std::getline(iss, token, ' ');
     token[0] = std::toupper(token[0]);
     answer += token + ' ';
+    prev_token = token;
 
     while (std::getline(iss, token, ' ')) { // parse word by word
         char delimiter = ' ';
