@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <chrono>
-#include <cmath>
 #include <initializer_list>
 #include <iomanip>
 #include <ios>
