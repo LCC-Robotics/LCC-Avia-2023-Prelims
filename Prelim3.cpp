@@ -109,8 +109,8 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
     // 2d vector storing the routes between each of the nodes: partial_routes[start_node][end_node]
     Matrix<std::string> partial_routes(NBR_NODES - 1, std::vector<std::string>(NBR_NODES, ""));
 
-     // instead of running path-finding for each node pair, we generate a cost table and a direction table for a node using BFS, 
-     // then we can simply look up the optimal route from the node to all other nodes (potentially faster than A*?)
+    // instead of running path-finding for each node pair, we generate a cost table and a direction table for a node using BFS,
+    // then we can simply look up the optimal route from the node to all other nodes (potentially faster than A*?)
     for (int i = 0; i < NBR_NODES; ++i) {
         const Node& start_node = nodes[i];
 
@@ -120,7 +120,7 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
         Matrix<int> costs(ROWS, std::vector<int>(COLS, INT_MAX));
         Matrix<Move> directions(ROWS, std::vector<Move>(COLS, Move::NONE)); // stores the direction that a given node came from
 
-        // custom comparator 
+        // custom comparator which prioritizes squares with lower cost (yes weird why >)
         static const auto node_has_priority = [&](const Node& a, const Node& b) -> bool {
             return costs[a.row][a.col] > costs[b.row][b.col];
         };
@@ -172,7 +172,7 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
                 continue; // impossible to get to node, skip
 
             std::string partial_route;
-            partial_route.resize(cost);
+            partial_route.resize(cost); // route will be of length cost
 
             // reconstruct partial route by backtracking from end point to start point
             for (auto it = partial_route.rbegin(); it < partial_route.rend(); ++it) {
@@ -181,7 +181,7 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
                 pos = pos.move(get_opposite_move(move)); // go backwards
             };
 
-            partial_routes[i][j] = partial_route; 
+            partial_routes[i][j] = partial_route; // store partial route
         }
     }
 
@@ -205,15 +205,14 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
         auto first = node_order.begin();
         auto second = node_order.begin() + 1;
 
-        // check if sliding window is outside of vector
-        while (second < node_order.end()) { 
+        while (second < node_order.end()) {
             std::string& partial_route = partial_routes[*first][*second];
             route += partial_route;
             cost += partial_route.length();
 
             first++;
             second++;
-        } ; 
+        };
 
         if (cost < min_cost) {
             // new best route
@@ -222,7 +221,7 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
         }
     } while (std::next_permutation(packages_begin, packages_end)); // only need to permutate packages
 
-    return best_route;
+    return best_route; // yay
 }
 
 // DO NOT MODIFY AFTER THIS LINE / NE PAS MODIFIER APRES CETTE LIGNE
