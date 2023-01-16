@@ -13,22 +13,22 @@
 using namespace std;
 
 enum Symbol : char {
-    Wall = '#',
-    Empty = ' ',
-    Flag = '$',
-    Path = '*',
-    Conflict = '@'
+    WALL = '#',
+    EMPTY = ' ',
+    FLAG = '$',
+    PATH = '*',
+    CONFLICT = '@'
 };
 
 enum Move : char {
-    Up = 'U',
-    Down = 'D',
-    Left = 'L',
-    Right = 'R',
-    None = ' '
+    UP = 'U',
+    DOWN = 'D',
+    LEFT = 'L',
+    RIGHT = 'R',
+    NONE = ' '
 };
 
-constexpr std::array<Move, 4> MOVES = { Move::Up, Move::Down, Move::Left, Move::Right };
+constexpr std::array<Move, 4> MOVES = { Move::UP, Move::DOWN, Move::LEFT, Move::RIGHT };
 
 template <typename T>
 using Matrix = std::vector<std::vector<T>>;
@@ -48,10 +48,10 @@ public:
         int row = this->row;
         int col = this->col;
         switch (move) {
-        case Move::Up: row--; break;
-        case Move::Down: row++; break;
-        case Move::Left: col--; break;
-        case Move::Right: col++; break;
+        case Move::UP: row--; break;
+        case Move::DOWN: row++; break;
+        case Move::LEFT: col--; break;
+        case Move::RIGHT: col++; break;
         default: break;
         }
         return Node(row, col);
@@ -61,21 +61,16 @@ public:
     {
         return a.row == b.row && a.col == b.col;
     };
-
-    friend inline bool operator<(const Node& a, const Node& b)
-    {
-        return a.row < b.row || (a.row == b.row && a.col < b.col);
-    };
 };
 
 Move get_opposite_move(const Move move)
 {
     switch (move) {
-    case Move::Up: return Move::Down;
-    case Move::Down: return Move::Up;
-    case Move::Left: return Move::Right;
-    case Move::Right: return Move::Left;
-    default: return Move::None;
+    case Move::UP: return Move::DOWN;
+    case Move::DOWN: return Move::UP;
+    case Move::LEFT: return Move::RIGHT;
+    case Move::RIGHT: return Move::LEFT;
+    default: return Move::NONE;
     }
 }
 
@@ -97,8 +92,8 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
     nodes.push_back(SRC);
     for (int row = 0; row < ROWS; ++row) {
         for (int col = 0; col < COLS; ++col) {
-            if (maze[row][col] == Symbol::Flag) {
-                nodes.emplace_back(row, col);
+            if (maze[row][col] == Symbol::FLAG) {
+                nodes.emplace_back(row, col); // add packages into nodes
             }
         }
     }
@@ -106,23 +101,29 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
 
     const int NBR_NODES = nodes.size();
 
+    // 2d vector storing the routes between each of the nodes: partial_routes[start_node][end_node]
     Matrix<std::string> partial_routes(NBR_NODES - 1, std::vector<std::string>(NBR_NODES, ""));
 
+     // instead of running path-finding for each node pair, we generate a cost table and a direction table for a node using BFS, 
+     // then we can simply look up the optimal route from the node to all other nodes (potentially faster than A*?)
     for (int i = 0; i < NBR_NODES; ++i) {
         const Node& start_node = nodes[i];
 
-        if (start_node == DEST)
+        if (start_node == DEST) // DEST will always be last node, no need to calculate
             continue;
 
         Matrix<int> costs(ROWS, std::vector<int>(COLS, INT_MAX));
-        Matrix<Move> directions(ROWS, std::vector<Move>(COLS, Move::None));
+        Matrix<Move> directions(ROWS, std::vector<Move>(COLS, Move::NONE)); // stores the direction a given node came from
 
-        static const auto node_is_greater = [&](const Node& a, const Node& b) -> bool {
+        // custom comparator 
+        static const auto node_has_priority = [&](const Node& a, const Node& b) -> bool {
             return costs[a.row][a.col] > costs[b.row][b.col];
         };
 
-        std::priority_queue<Node, std::vector<Node>, decltype(node_is_greater)> frontier { node_is_greater };
+        // prioritize processing squares with lower cost
+        std::priority_queue<Node, std::vector<Node>, decltype(node_has_priority)> frontier { node_has_priority };
 
+        // add src node to queue
         frontier.push(start_node);
         costs[start_node.row][start_node.col] = 0;
 
@@ -135,11 +136,13 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
             for (const Move& move : MOVES) {
                 const Node next_node = curr_node.move(move);
 
-                if (next_node.row < 0 || next_node.row >= ROWS || next_node.col < 0 || next_node.col >= COLS
-                    || maze[next_node.row][next_node.col] == Symbol::Wall)
+                if (next_node.row < 0 || next_node.row >= ROWS || next_node.col < 0 || next_node.col >= COLS // out of bounds
+                    || maze[next_node.row][next_node.col] == Symbol::WALL // invalid square
+                )
                     continue;
 
                 if (new_cost < costs[next_node.row][next_node.col]) {
+                    // update value of square or a shortcut is found
                     costs[next_node.row][next_node.col] = new_cost;
                     directions[next_node.row][next_node.col] = move;
 
@@ -148,36 +151,43 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
             }
         }
 
+        // now, reconsruct partial route from start_node to other nodes
         for (int j = 0; j < NBR_NODES; ++j) {
             const Node& end_node = nodes[j];
 
-            if (start_node == end_node || end_node == SRC)
+            if (start_node == end_node // cannot go to same node
+                || end_node == SRC // SRC is always the first node, no need to calculate
+            )
                 continue;
 
             Node pos = end_node;
             int cost = costs[pos.row][pos.col];
 
             if (cost == INT_MAX)
-                continue; // impossible to get package, skip
+                continue; // impossible to get to node, skip
 
             std::string partial_route;
             partial_route.resize(cost);
 
+            // reconstruct partial route by backtracking from end point to start point
             for (auto it = partial_route.rbegin(); it < partial_route.rend(); ++it) {
                 const Move move = directions[pos.row][pos.col];
                 *it += move;
-                pos = pos.move(get_opposite_move(move));
+                pos = pos.move(get_opposite_move(move)); // go backwards
             };
 
-            partial_routes[i][j] = partial_route;
+            partial_routes[i][j] = partial_route; 
         }
     }
 
-    std::vector<int> node_order(NBR_NODES);
-    std::iota(node_order.begin(), node_order.end(), 0);
+    // time to reconstruct and find optimal route (travelling salesman)
 
-    auto package_begin = node_order.begin() + 1;
-    auto package_end = node_order.end() - 1;
+    std::vector<int> node_order(NBR_NODES); // based on the ordering of the nodes vector (ugly to next_permutation directly on nodes vector)
+    std::iota(node_order.begin(), node_order.end(), 0); // {0, 1, 2, ... , NBR_NODES - 1 , NBR_NODES}
+
+    // iterators for packages, needed to permutate order of packages
+    auto packages_begin = node_order.begin() + 1;
+    auto packages_end = node_order.end() - 1;
 
     std::string best_route;
     int min_cost = INT_MAX;
@@ -186,24 +196,26 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
         std::string route;
         int cost = 0;
 
-        // no std::span bfo
+        // sliding window (is there better way?)
         auto first = node_order.begin();
         auto second = node_order.begin() + 1;
 
-        do {
+        // check if sliding window is outside of vector
+        while (second < node_order.end()) { 
             std::string& partial_route = partial_routes[*first][*second];
             route += partial_route;
             cost += partial_route.length();
 
             first++;
             second++;
-        } while (second < node_order.end());
+        } ; 
 
         if (cost < min_cost) {
+            // new best route
             best_route = route;
             min_cost = cost;
         }
-    } while (std::next_permutation(package_begin, package_end));
+    } while (std::next_permutation(packages_begin, packages_end)); // only need to permutate packages
 
     return best_route;
 }
@@ -220,16 +232,16 @@ void correction(const int WIDTH, const int HEIGHT, vector<string> maze, const st
     bool flagReached = false;
     string errorText;
 
-    maze[0].replace(1, 1, 1, Path);
+    maze[0].replace(1, 1, 1, PATH);
 
     // go over the path to add it to the maze / itere sur le chemin pour l'ajouter au labyrinthe
     for (const auto& move : path) {
         // movement / deplacement
         switch (move) {
-        case Up: y--; break;
-        case Down: y++; break;
-        case Left: x--; break;
-        case Right: x++; break;
+        case UP: y--; break;
+        case DOWN: y++; break;
+        case LEFT: x--; break;
+        case RIGHT: x++; break;
         default:
             cout << (CONSOLE_LANGUAGE == "FR" ? "Symbole invalide de deplacement" : "Invalid symbol for the movement") << '\n';
         }
@@ -246,16 +258,16 @@ void correction(const int WIDTH, const int HEIGHT, vector<string> maze, const st
 
         // Add path or conflict to the maze / Ajoute le chemin ou la collision au labyrinthe
         switch (maze[y][x]) {
-        case Empty:
-            maze[y].replace(x, 1, 1, Path);
+        case EMPTY:
+            maze[y].replace(x, 1, 1, PATH);
             break;
-        case Flag:
+        case FLAG:
             flagReached = true;
-        case Path:
-        case Conflict:
+        case PATH:
+        case CONFLICT:
             break;
-        case Wall:
-            maze[y].replace(x, 1, 1, Conflict);
+        case WALL:
+            maze[y].replace(x, 1, 1, CONFLICT);
             conflicts = true;
             break;
         default:
@@ -327,11 +339,11 @@ int main()
                  "############# #" };
 
     mazes[2] = { "# ###################",
-                 "#   #          $    #",
+                 "#   #               #",
                  "# # # ### ### ### # #",
                  "#           # # #   #",
                  "########### # # ### #",
-                 "#    $# #   #       #",
+                 "#     # #   #       #",
                  "# ### # ### ##### ###",
                  "#   # #   #     #   #",
                  "### # ### ### # #####",
