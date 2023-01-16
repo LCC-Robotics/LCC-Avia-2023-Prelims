@@ -33,7 +33,7 @@ constexpr std::array<Move, 4> MOVES = { Move::UP, Move::DOWN, Move::LEFT, Move::
 template <typename T>
 using Matrix = std::vector<std::vector<T>>;
 
-class Node {
+struct Node {
 public:
     int row;
     int col;
@@ -84,12 +84,16 @@ void print_grid(const std::vector<std::string>& maze)
 
 std::string solve(const int COLS, const int ROWS, const std::vector<std::string>& maze)
 {
+    // I just realized there will always only be one package (bruh) but too lazy to change it
+    // so here is an implementation that works with n packages
+
     const Node SRC { 0, 1 };
     const Node DEST { ROWS - 1, COLS - 2 };
 
     std::vector<Node> nodes;
 
     nodes.push_back(SRC);
+
     for (int row = 0; row < ROWS; ++row) {
         for (int col = 0; col < COLS; ++col) {
             if (maze[row][col] == Symbol::FLAG) {
@@ -97,6 +101,7 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
             }
         }
     }
+
     nodes.push_back(DEST);
 
     const int NBR_NODES = nodes.size();
@@ -113,7 +118,7 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
             continue;
 
         Matrix<int> costs(ROWS, std::vector<int>(COLS, INT_MAX));
-        Matrix<Move> directions(ROWS, std::vector<Move>(COLS, Move::NONE)); // stores the direction a given node came from
+        Matrix<Move> directions(ROWS, std::vector<Move>(COLS, Move::NONE)); // stores the direction that a given node came from
 
         // custom comparator 
         static const auto node_has_priority = [&](const Node& a, const Node& b) -> bool {
@@ -137,7 +142,7 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
                 const Node next_node = curr_node.move(move);
 
                 if (next_node.row < 0 || next_node.row >= ROWS || next_node.col < 0 || next_node.col >= COLS // out of bounds
-                    || maze[next_node.row][next_node.col] == Symbol::WALL // invalid square
+                    || maze[next_node.row][next_node.col] == Symbol::WALL // square is a wall, do not process
                 )
                     continue;
 
