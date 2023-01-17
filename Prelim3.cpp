@@ -283,29 +283,26 @@ void correction(const int WIDTH, const int HEIGHT, vector<string> maze, const st
     }
 
     // output for the test / sortie du test
-    cout << (CONSOLE_LANGUAGE == "FR" ? "Votre nombre de déplacements est: " : "Your number of moves is: ") << count << '\n'
+    cout << (CONSOLE_LANGUAGE == "FR" ? "Votre nombre de déplacements est: " : "Your number of moves is: ") << count << "\n"
          << (CONSOLE_LANGUAGE == "FR" ? "Voici le labyrinthe obtenu, les * sont votre chemin et les @ sont des conflits avec les murs" : "This is the maze with your path indicated as * and the conflicts indicated as @") << '\n';
 
     print_grid(maze);
 
     if (conflicts) {
-        cout << (CONSOLE_LANGUAGE == "FR" ? "Il y a une erreur dans votre parcours" : "There is something problematic in your solution") << '\n'
-             << endl;
+        cout << (CONSOLE_LANGUAGE == "FR" ? "Il y a une erreur dans votre parcours" : "There is something problematic in your solution") << endl;
         return;
     }
     if (flagReached) {
-        cout << (CONSOLE_LANGUAGE == "FR" ? "Bravo vous avez atteint le paquet" : "Congratulations you have picked up the package") << '\n'
-             << endl;
+        cout << (CONSOLE_LANGUAGE == "FR" ? "Bravo vous avez atteint le paquet" : "Congratulations you have picked up the package") << endl;
     }
     if (x == WIDTH - 2 && y == HEIGHT - 1) {
-        cout << (CONSOLE_LANGUAGE == "FR" ? "Bravo vous avez atteint la sortie du labyrinthe" : "Congratulations you have reached the end of the maze") << '\n'
-             << endl;
+        cout << (CONSOLE_LANGUAGE == "FR" ? "Bravo vous avez atteint la sortie du labyrinthe" : "Congratulations you have reached the end of the maze") << endl;
     }
 }
 
 int main()
 {
-    const int nbr_cases = 3;
+    constexpr int nbr_cases = 3;
     vector<vector<string>> mazes(nbr_cases);
 
     // clang-format off
@@ -364,7 +361,8 @@ int main()
     using Clock = chrono::high_resolution_clock;
     using Ms = chrono::duration<float, chrono::milliseconds::period>;
 
-    vector<bool> should_test { true, true, true };
+    // debug purposes
+    array<bool, nbr_cases> should_test { true, true, true };
 
     Ms total_duration;
 
@@ -387,7 +385,7 @@ int main()
         cout << std::fixed << std::setprecision(3)
              << (CONSOLE_LANGUAGE == "FR" ? "Temps de Résolution: " : "Solve Time: ")
              << duration.count() << "ms"
-             << "\n\n";
+             << "\n";
 
         correction(
             static_cast<int>(mazes[i][0].length()),
@@ -397,6 +395,7 @@ int main()
     }
 
     cout << std::fixed << std::setprecision(3)
+         << '\n'
          << (CONSOLE_LANGUAGE == "FR" ? "Temps de Résolution Totale: " : "Total Solve Time: ")
          << total_duration.count() << "ms"
          << "\n\n";
