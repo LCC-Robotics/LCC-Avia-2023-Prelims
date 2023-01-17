@@ -2,15 +2,11 @@
 #include <array>
 #include <chrono>
 #include <iomanip>
-#include <ios>
 #include <iostream>
-#include <limits>
 #include <numeric>
 #include <queue>
 #include <string>
 #include <vector>
-
-using namespace std;
 
 enum Symbol : char {
     WALL = '#',
@@ -28,7 +24,7 @@ enum Move : char {
     NONE = ' '
 };
 
-constexpr std::array<Move, 4> MOVES = { Move::UP, Move::DOWN, Move::LEFT, Move::RIGHT };
+constexpr std::array<Move, 4> NON_TRIVIAL_MOVES { Move::UP, Move::DOWN, Move::LEFT, Move::RIGHT };
 
 template <typename T>
 using Matrix = std::vector<std::vector<T>>;
@@ -37,6 +33,7 @@ struct Node {
 public:
     int row;
     int col;
+
     Node(int row, int col)
         : row(row)
         , col(col)
@@ -45,16 +42,18 @@ public:
 
     Node move(Move move) const
     {
-        int row = this->row;
-        int col = this->col;
+        int new_row = this->row;
+        int new_col = this->col;
+
         switch (move) {
-        case Move::UP: row--; break;
-        case Move::DOWN: row++; break;
-        case Move::LEFT: col--; break;
-        case Move::RIGHT: col++; break;
+        case Move::UP: new_row--; break;
+        case Move::DOWN: new_row++; break;
+        case Move::LEFT: new_col--; break;
+        case Move::RIGHT: new_col++; break;
         default: break;
         }
-        return Node(row, col);
+
+        return { new_row, new_col };
     }
 
     friend inline bool operator==(const Node& a, const Node& b)
@@ -72,14 +71,6 @@ Move get_opposite_move(const Move move)
     case Move::RIGHT: return Move::LEFT;
     default: return Move::NONE;
     }
-}
-
-void print_grid(const std::vector<std::string>& maze)
-{
-    for (const std::string& line : maze) {
-        std::cout << line << '\n';
-    }
-    std::cout << std::endl;
 }
 
 std::string solve(const int COLS, const int ROWS, const std::vector<std::string>& maze)
@@ -104,20 +95,21 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
 
     nodes.push_back(DEST);
 
-    const int NBR_NODES = nodes.size();
+    const size_t NBR_NODES = nodes.size();
 
     // 2d vector storing the routes between each of the nodes: partial_routes[start_node][end_node]
+    // it has NBR_NODES - 1 rows because DEST is always the last node, i.e. cannot go from DEST to any other node
     Matrix<std::string> partial_routes(NBR_NODES - 1, std::vector<std::string>(NBR_NODES, ""));
 
     // instead of running path-finding for each node pair, we generate a cost table and a direction table for a node using BFS,
     // then we can simply look up the optimal route from the node to all other nodes (potentially faster than A*?)
-    for (int i = 0; i < NBR_NODES; ++i) {
+    for (size_t i = 0; i < NBR_NODES; ++i) {
         const Node& start_node = nodes[i];
 
-        if (start_node == DEST) // DEST will always be last node, no need to calculate
+        if (start_node == DEST) // DEST will always be the last node, so we cannot go from DEST to another node
             continue;
 
-        Matrix<int> costs(ROWS, std::vector<int>(COLS, INT_MAX));
+        Matrix<unsigned int> costs(ROWS, std::vector<unsigned int>(COLS, UINT_MAX));
         Matrix<Move> directions(ROWS, std::vector<Move>(COLS, Move::NONE)); // stores the direction that a given node came from
 
         // custom comparator which prioritizes squares with lower cost (yes weird why >)
@@ -136,9 +128,9 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
             const Node curr_node = frontier.top();
             frontier.pop();
 
-            const int new_cost = costs[curr_node.row][curr_node.col] + 1;
+            const unsigned int new_cost = costs[curr_node.row][curr_node.col] + 1;
 
-            for (const Move& move : MOVES) {
+            for (const Move& move : NON_TRIVIAL_MOVES) {
                 const Node next_node = curr_node.move(move);
 
                 if (next_node.row < 0 || next_node.row >= ROWS || next_node.col < 0 || next_node.col >= COLS // out of bounds
@@ -156,30 +148,30 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
             }
         }
 
-        // now, reconsruct partial route from start_node to other nodes
-        for (int j = 0; j < NBR_NODES; ++j) {
+        // now, reconstruct partial route from start_node to other nodes
+        for (size_t j = 0; j < NBR_NODES; ++j) {
             const Node& end_node = nodes[j];
 
             if (start_node == end_node // cannot go to same node
-                || end_node == SRC // SRC is always the first node, no need to calculate
+                || end_node == SRC // SRC is always the first node, so we cannot go from any node back to SRC
             )
                 continue;
 
             Node pos = end_node;
-            int cost = costs[pos.row][pos.col];
+            const unsigned int cost = costs[pos.row][pos.col];
 
-            if (cost == INT_MAX)
+            if (cost == UINT_MAX)
                 continue; // impossible to get to node, skip
 
             std::string partial_route;
             partial_route.resize(cost); // route will be of length cost
 
             // reconstruct partial route by backtracking from end point to start point
-            for (auto it = partial_route.rbegin(); it < partial_route.rend(); ++it) {
+            for (auto rit = partial_route.rbegin(); rit < partial_route.rend(); ++rit) {
                 const Move move = directions[pos.row][pos.col];
-                *it += move;
+                *rit = move;
                 pos = pos.move(get_opposite_move(move)); // go backwards
-            };
+            }
 
             partial_routes[i][j] = partial_route; // store partial route
         }
@@ -188,18 +180,18 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
     // time to reconstruct and find optimal route (travelling salesman)
 
     std::vector<int> node_order(NBR_NODES); // based on the ordering of the nodes vector (ugly to next_permutation directly on nodes vector)
-    std::iota(node_order.begin(), node_order.end(), 0); // {0, 1, 2, ... , NBR_NODES - 1 , NBR_NODES}
+    std::iota(node_order.begin(), node_order.end(), 0); // {0, 1, 2, ... , NBR_NODES - 1 , NBR_NODES} <-- similar to python range
 
-    // iterators for packages, needed to permutate order of packages
+    // iterators for packages, needed to permutation order of packages
     auto packages_begin = node_order.begin() + 1;
     auto packages_end = node_order.end() - 1;
 
     std::string best_route;
-    int min_cost = INT_MAX;
+    unsigned int min_cost = UINT_MAX;
 
     do {
         std::string route;
-        int cost = 0;
+        unsigned int cost = 0;
 
         // sliding window (is there better way?)
         auto first = node_order.begin();
@@ -212,20 +204,29 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
 
             first++;
             second++;
-        };
+        }
 
         if (cost < min_cost) {
             // new best route
             best_route = route;
             min_cost = cost;
         }
-    } while (std::next_permutation(packages_begin, packages_end)); // only need to permutate packages
+    } while (std::next_permutation(packages_begin, packages_end)); // only need to permutation packages
 
     return best_route; // yay
 }
 
 // DO NOT MODIFY AFTER THIS LINE / NE PAS MODIFIER APRES CETTE LIGNE
-string CONSOLE_LANGUAGE = "ENG";
+using namespace std;
+const string CONSOLE_LANGUAGE = "ENG"; // "ENG" | "FR"
+
+void print_grid(const std::vector<std::string>& maze)
+{
+    for (const std::string& line : maze) {
+        std::cout << line << '\n';
+    }
+    std::cout << std::endl;
+}
 
 void correction(const int WIDTH, const int HEIGHT, vector<string> maze, const string& path)
 {
@@ -374,7 +375,12 @@ int main()
         cout << "\nTest #" << i + 1 << endl;
 
         auto start = Clock::now();
-        const string answer = solve(mazes[i][0].length(), mazes[i].size(), mazes[i]);
+
+        const string answer = solve(
+            static_cast<int>(mazes[i][0].length()),
+            static_cast<int>(mazes[i].size()),
+            mazes[i]);
+
         Ms duration = Clock::now() - start;
         total_duration += duration;
 
@@ -383,7 +389,11 @@ int main()
              << duration.count() << "ms"
              << "\n\n";
 
-        correction(mazes[i][0].length(), mazes[i].size(), mazes[i], answer);
+        correction(
+            static_cast<int>(mazes[i][0].length()),
+            static_cast<int>(mazes[i].size()),
+            mazes[i],
+            answer);
     }
 
     cout << std::fixed << std::setprecision(3)
