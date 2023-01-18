@@ -112,13 +112,14 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
         Matrix<unsigned int> costs(ROWS, std::vector<unsigned int>(COLS, UINT_MAX));
         Matrix<Move> directions(ROWS, std::vector<Move>(COLS, Move::NONE)); // stores the direction that a given node came from
 
-        // custom comparator which prioritizes squares with lower cost (yes weird why >)
-        static const auto node_has_priority = [&](const Node& a, const Node& b) -> bool {
-            return costs[a.row][a.col] > costs[b.row][b.col];
+        // custom comparator which prioritizes squares with lower cost 
+        // note that using operator> causes the priority queue to act as a min priority queue and vice versa (weird as hell)
+        static const auto compare_node = [&costs](const Node& lhs, const Node& rhs) -> bool {
+            return costs[lhs.row][lhs.col] > costs[rhs.row][rhs.col];
         };
 
-        // prioritize processing squares with lower cost
-        std::priority_queue<Node, std::vector<Node>, decltype(node_has_priority)> frontier { node_has_priority };
+        // prioritize processing squares with lower cost (min priority queue)
+        std::priority_queue<Node, std::vector<Node>, decltype(compare_node)> frontier { compare_node };
 
         // add src node to queue
         frontier.push(start_node);
@@ -210,6 +211,8 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
             // new best route
             best_route = route;
             min_cost = cost;
+
+            // std::cout << cost << ' ' << route << '\n';
         }
     } while (std::next_permutation(packages_begin, packages_end)); // only need to permutation packages
 
