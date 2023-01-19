@@ -199,7 +199,7 @@ std::string solve(const int COLS, const int ROWS, const std::vector<std::string>
         auto second = node_order.begin() + 1;
 
         while (second < node_order.end()) {
-            std::string& partial_route = partial_routes[*first][*second];
+            const std::string& partial_route = partial_routes[*first][*second];
             route += partial_route;
             cost += partial_route.length();
 
